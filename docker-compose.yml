@@ -1,0 +1,52 @@
+services:
+  backend:
+    build: ./app/backend
+    restart: unless-stopped
+    env_file: ./app/backend/.env
+    environment:
+      - PYTHONPATH=/app
+      - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+    depends_on:
+      postgres:
+        condition: service_started
+    ports:
+      - "8001:8001"
+    volumes:
+      # Mount the frontend public folder so the PDF generator can find the logo
+      - ./app/frontend/public:/app/assets:ro
+      # Persist uploaded product images across container rebuilds
+      - ./app/backend/routes/uploads:/app/routes/uploads
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./app/frontend
+      args:
+        - REACT_APP_BACKEND_URL=http://localhost:8001
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - app-network
+
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  pg_data:
