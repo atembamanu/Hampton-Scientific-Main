@@ -25,6 +25,8 @@ services:
       args:
         - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-http://localhost:8001}
     restart: unless-stopped
+    environment:
+      - PORT=3001
     ports:
       - "3001:3001"
     networks:

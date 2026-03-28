@@ -238,7 +238,7 @@ async def get_cached_system_context():
 async def chatbot_query(query: dict):
     user_message = query.get("message", "")
     session_id = query.get("session_id", "default")
-    frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+    frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3001')
 
     try:
         # Get fast cached context
@@ -355,7 +355,7 @@ app.include_router(training.router, prefix="/api/training")
 app.include_router(contact.router, prefix="/api")
 app.include_router(stats.router, prefix="/api/admin")
 
-_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3000")
+_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3001")
 _cors_list = [o.strip() for o in _cors_origins.split(",") if o.strip()]
 
 app.add_middleware(

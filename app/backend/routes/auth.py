@@ -177,7 +177,7 @@ async def forgot_password(
     try:
         import os
 
-        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+        frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3001")
         reset_url = f"{frontend_url}/reset-password?token={reset_token}"
         send_password_reset_email(email, reset_token, reset_url)
         logger.info(f"Password reset email sent to: {email}")
