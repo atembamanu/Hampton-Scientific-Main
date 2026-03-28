@@ -1,0 +1,9 @@
+/* App Styles */
+.App {
+  min-height: 100vh;
+}
+
+/* Smooth scrolling for better UX */
+html {
+  scroll-behavior: smooth;
+}

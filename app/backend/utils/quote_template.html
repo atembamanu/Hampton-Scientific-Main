@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        :root {
+            --primary-color: #628C84;
+            /* Sage Green from your sample */
+            --text-main: #333333;
+            --text-light: #666666;
+            --border-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 40px;
+            color: var(--text-main);
+            line-height: 1.4;
+        }
+
+        /* Header Layout */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 60px;
+        }
+
+        .company-info h1 {
+            margin: 0;
+            font-size: 18px;
+            color: var(--text-main);
+        }
+
+        .company-info p {
+            margin: 2px 0;
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .doc-type {
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--primary-color);
+            letter-spacing: 4px;
+            margin: 0;
+        }
+
+        /* Info Grid */
+        .info-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .meta-table td {
+            font-size: 11px;
+            padding: 4px 0;
+        }
+
+        .meta-label {
+            color: var(--primary-color);
+            font-weight: bold;
+            padding-right: 20px !important;
+            text-align: right;
+        }
+
+        /* Items Table */
+        table.items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        .items-table th {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: left;
+            padding: 12px;
+            font-size: 12px;
+        }
+
+        .items-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 12px;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        /* Totals */
+        .totals-container {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .totals-table {
+            width: 250px;
+        }
+
+        .totals-table td {
+            padding: 8px 0;
+            font-size: 13px;
+        }
+
+        .total-row {
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 16px;
+            border-top: 2px solid var(--primary-color);
+            border-bottom: 2px solid var(--primary-color);
+        }
+
+        /* Footer & Signature */
+        .footer {
+            margin-top: 100px;
+        }
+
+        .company-address {
+            padding-top: 20px;
+        }
+
+        .extra-info-row {
+            color: var(--text-light);
+            font-size: 10px;
+        }
+        .customer-details {
+            margin: 2px 0; 
+            font-size: 12px; 
+            color: var(--text-light);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="company-info">
+            <img src="{{ logo_data }}" alt="Hampton Scientific Limited"
+                style="width: 200px; height: 40px;">
+                <div class="company-address">
+                    <p>{{ company.address_line1 }}</p>
+                    <p>{{ company.address_line2 }}</p>
+                    <p>{{ company.phone or '' }}</p>
+                    <p>{{ company.email or '' }}</p>
+                    <p>{{ company.website or '' }}</p>
+                </div>
+        </div>
+        <h2 class="doc-type">QUOTE</h2>
+    </div>
+
+    <div class="info-grid">
+        <div class="bill-to">
+            <div class="section-title">Bill To</div>
+            <div style="font-weight: bold; font-size: 14px;">{{ customer_name }}</div>
+            <p class="customer-details">{{ customer_email }}</p>
+            <p class="customer-details">{{ customer_phone }}</p>
+            <p class="customer-details">{{ customer_address }}</p>
+        </div>
+        <table class="meta-table">
+            <tr>
+                <td class="meta-label">Quote Ref#</td>
+                <td>{{ quote_ref }}</td>
+            </tr>
+            <tr>
+                <td class="meta-label">Quote Date</td>
+                <td>{{ quote_date }}</td>
+            </tr>
+            <tr>
+                <td class="meta-label">Due Date</td>
+                <td>{{ due_date }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width: 60%;">Description</th>
+                <th style="width: 10%;">Qnty</th>
+                <th style="width: 15%;" class="text-right">Unit Price</th>
+                <th style="width: 15%;" class="text-right">Amount</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.description }}</td>
+                <td>{{ "%.2f"|format(item.qty) }}</td>
+                <td class="text-right">{{ "{:,.2f}".format(item.price) }}</td>
+                <td class="text-right">{{ "{:,.2f}".format(item.amount) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="totals-container">
+        <table class="totals-table">
+            <tr>
+                <td>Subtotal</td>
+                <td class="text-right">{{ currency }} {{ "{:,.2f}".format(subtotal) }}</td>
+            </tr>
+            <tr class="extra-info-row">
+                <td>{{ discount_label }}</td>
+                <td class="text-right">- {{ currency }} {{ "{:,.2f}".format(discount) }}</td>
+            </tr>
+            <tr  class="extra-info-row">
+                <td>{{ vat_label }}</td>
+                <td class="text-right">{{ currency }} {{ "{:,.2f}".format(tax_amount) }}</td>
+            </tr>
+            <tr class="total-row">
+                <td>Total</td>
+                <td class="text-right">{{ currency }} {{ "{:,.2f}".format(total) }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        <div class="section-title">Terms and Conditions</div>
+        <p style="font-size: 11px; color: var(--text-light);">{{ terms_text }}</p>
+
+    </div>
+
+</body>
+
+</html>
