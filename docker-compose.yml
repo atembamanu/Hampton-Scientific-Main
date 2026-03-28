@@ -2,7 +2,7 @@ services:
   backend:
     build: ./app/backend
     restart: unless-stopped
-    env_file: ./app/backend/.env
+    env_file: ./.env
     environment:
       - PYTHONPATH=/app
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
@@ -23,7 +23,7 @@ services:
     build:
       context: ./app/frontend
       args:
-        - REACT_APP_BACKEND_URL=http://localhost:8001
+        - REACT_APP_BACKEND_URL=${REACT_APP_BACKEND_URL:-http://localhost:8001}
     restart: unless-stopped
     ports:
       - "3000:3000"
