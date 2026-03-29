@@ -1,2 +1,4 @@
 .env
 app/backend/venv/
+.postman
+postman
