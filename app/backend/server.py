@@ -355,15 +355,36 @@ app.include_router(training.router, prefix="/api/training")
 app.include_router(contact.router, prefix="/api")
 app.include_router(stats.router, prefix="/api/admin")
 
-_cors_origins = os.getenv("CORS_ORIGINS", "http://localhost:3001")
-_cors_list = [o.strip() for o in _cors_origins.split(",") if o.strip()]
+def _parse_cors_origins() -> List[str]:
+    """Split CORS_ORIGINS; strip whitespace, optional wrapping quotes, trailing slashes."""
+    raw = os.getenv("CORS_ORIGINS", "http://localhost:3001")
+    out: List[str] = []
+    for part in raw.split(","):
+        o = part.strip()
+        if len(o) >= 2 and o[0] == o[-1] and o[0] in "\"'":
+            o = o[1:-1].strip()
+        o = o.rstrip("/")
+        if o:
+            out.append(o)
+    return out or ["http://localhost:3001"]
+
+
+_cors_list = _parse_cors_origins()
+_cors_regex = (os.getenv("CORS_ORIGIN_REGEX") or "").strip() or None
 
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
     allow_origins=_cors_list,
+    allow_origin_regex=_cors_regex,
     allow_methods=["*"],
     allow_headers=["*"],
+)
+
+logger.info(
+    "CORS allow_origins=%s allow_origin_regex=%s",
+    _cors_list,
+    _cors_regex or "(none)",
 )
 
 # Background scheduler for email follow-ups
