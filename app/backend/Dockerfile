@@ -3,10 +3,14 @@ FROM mcr.microsoft.com/playwright/python:v1.42.0-jammy
 
 WORKDIR /app
 
-# Upgrade pip
+# App dependencies live in a venv (avoids pip "running as root" / system site-packages warning)
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv "$VIRTUAL_ENV"
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
 RUN pip install --no-cache-dir --upgrade pip
 
-# Install Python dependencies
+# Install Python dependencies into the venv
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
@@ -24,5 +28,4 @@ EXPOSE 8001
 # This ensures /app is always in the search path for imports
 ENV PYTHONPATH=/app
 
-# The CMD remains the same
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8001"]
