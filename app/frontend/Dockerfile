@@ -9,7 +9,7 @@ RUN yarn install --frozen-lockfile
 COPY . .
 
 # Dokploy / docker-compose must pass: --build-arg REACT_APP_BACKEND_URL=https://api.yourdomain.com
-ARG REACT_APP_BACKEND_URL=http://localhost:8001
+ARG REACT_APP_BACKEND_URL=https://api.hamptonscientific.com
 ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
 
 RUN yarn build
