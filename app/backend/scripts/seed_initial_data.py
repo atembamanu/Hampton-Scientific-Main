@@ -16,7 +16,7 @@ from utils.auth import get_password_hash
 
 def ensure_admin_user(session: SessionLocal) -> None:
     """Create admin user if it does not exist."""
-    admin_email = "admin@hamptonscientific.co.ke"
+    admin_email = "admin@hamptonscientific.com"
     user = session.query(User).filter(User.email == admin_email).one_or_none()
     if user:
         print(f"[seed] Admin user already exists: {admin_email}")
@@ -41,7 +41,7 @@ def ensure_admin_user(session: SessionLocal) -> None:
     )
     session.add(admin)
     session.commit()
-    print(f"[seed] Admin user created: {admin_email} / HamptonAdmin2026!")
+    '''print(f"[seed] Admin user created: {admin_email} / HamptonAdmin2026!")'''
 
 
 def ensure_site_settings(session: SessionLocal) -> None:
