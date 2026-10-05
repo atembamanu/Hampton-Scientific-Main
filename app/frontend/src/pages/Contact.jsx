@@ -1,142 +1,78 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { GraduationCap, FileText, MapPin, Mail, MessageSquare, Phone, Send, Sparkles, User } from 'lucide-react';
-import { toast } from 'sonner';
-import { useAuth } from '../context/AuthContext';
 import axios from 'axios';
+import { toast } from 'sonner';
 
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Textarea } from '../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import { API_URL } from '@/config/apiBaseUrl';
+import { EditorialField } from '../components/template/EditorialSection';
+import { FilterMultiSelect } from '../components/FilterMultiSelect';
+import { API_URL } from '../config/apiBaseUrl';
+import { emailError, phoneError, liveEmailError, livePhoneError, invalidFieldClass } from '../utils/validation';
+import { formatApiError } from '../utils/apiError';
+import { useSiteContent, websiteHref, websiteLabel } from '../utils/siteContent';
+import { useLiveCatalog } from '../utils/liveCatalog';
+import { SheetTabs } from '../components/ui/SheetTabs';
 
-// Default contact info as fallback
-const defaultContactInfo = {
-  address: 'Ushuru Pension Plaza, Muthangari Drive Block C, First Floor',
-  poBox: 'P.O. Box 162 - 00517 Westlands, Nairobi',
-  phone: '0717 023 814',
-  email: 'info@hamptonscientific.com',
-  working_hours: 'Mon - Fri: 8:00 AM - 5:00 PM EAT'
-};
+const inputClass =
+  'w-full border border-ink/10 rounded-xl px-4 py-3 text-sm text-ink placeholder:text-ink-faint/70 focus:outline-none focus:border-copper/40 focus:ring-1 focus:ring-copper/20 bg-white transition-colors';
+
+const categoryTriggerClass =
+  'form-field !h-auto min-h-[46px] rounded-[4px] border border-ink/10 px-4 py-3 bg-white focus:outline-none focus:border-copper/40 focus:ring-1 focus:ring-copper/20';
+
+const tabs = [
+  { id: 'contact', label: 'General inquiry' },
+  { id: 'quote', label: 'Request quote' },
+  { id: 'training', label: 'Training' },
+];
 
 export const Contact = () => {
   const location = useLocation();
-  const { user, isAuthenticated } = useAuth();
+  const { contact: info } = useSiteContent();
+  const { categories, loading: categoriesLoading } = useLiveCatalog();
   const [activeTab, setActiveTab] = useState('contact');
-  const [contactInfo, setContactInfo] = useState(defaultContactInfo);
-  
-  // Fetch site settings on mount
-  useEffect(() => {
-    const fetchSettings = async () => {
-      try {
-        const response = await axios.get(`${API_URL}/api/settings`);
-        setContactInfo({
-          address: response.data.address || defaultContactInfo.address,
-          poBox: response.data.po_box || defaultContactInfo.poBox,
-          phone: response.data.phone || defaultContactInfo.phone,
-          email: response.data.email || defaultContactInfo.email,
-          working_hours: response.data.working_hours || defaultContactInfo.working_hours
-        });
-      } catch (error) {
-        console.error('Failed to fetch settings:', error);
-        // Keep using default contact info
-      }
-    };
-    fetchSettings();
-  }, []);
-  
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const tab = params.get('tab');
-    if (tab && ['contact', 'quote', 'training'].includes(tab)) {
-      setActiveTab(tab);
-    }
-  }, [location]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newsletterEmail, setNewsletterEmail] = useState('');
+  const [newsletterResult, setNewsletterResult] = useState(null);
+  const [newsletterLoading, setNewsletterLoading] = useState(false);
+  const webHref = websiteHref(info.website);
+  const phoneHref = (info.phone || '').replace(/\s/g, '');
+
+  const categoryOptions = useMemo(
+    () =>
+      (categories || []).map((cat) => ({
+        value: String(cat.category_id),
+        label: cat.name,
+      })),
+    [categories],
+  );
 
   const [contactForm, setContactForm] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    subject: '',
-    message: ''
+    name: '', email: '', phone: '', subject: '', message: '',
   });
-
   const [quoteForm, setQuoteForm] = useState({
-    facilityName: '',
-    contactPerson: '',
-    email: '',
-    phone: '',
-    productCategory: '',
-    specificProducts: '',
-    quantity: '',
-    message: ''
+    facilityName: '', contactPerson: '', email: '', phone: '', productCategories: [], message: '',
   });
-
   const [trainingForm, setTrainingForm] = useState({
-    facilityName: '',
-    contactPerson: '',
-    email: '',
-    phone: '',
-    trainingType: '',
-    numberOfParticipants: '',
-    preferredDate: '',
-    message: ''
+    facilityName: '', contactPerson: '', email: '', phone: '',
+    trainingType: '', numberOfParticipants: '', preferredDate: '', message: '',
   });
 
-  // Auto-fill forms when user is logged in
   useEffect(() => {
-    if (isAuthenticated && user) {
-      const fullName = `${user.firstName || ''} ${user.lastName || ''}`.trim();
-      
-      setContactForm(prev => ({
-        ...prev,
-        name: fullName,
-        email: user.email || '',
-        phone: user.phone || ''
-      }));
-      
-      setQuoteForm(prev => ({
-        ...prev,
-        facilityName: user.facilityName || '',
-        contactPerson: fullName,
-        email: user.email || '',
-        phone: user.phone || ''
-      }));
-      
-      setTrainingForm(prev => ({
-        ...prev,
-        facilityName: user.facilityName || '',
-        contactPerson: fullName,
-        email: user.email || '',
-        phone: user.phone || ''
-      }));
-    }
-  }, [isAuthenticated, user]);
-
-  const [newsletterEmail, setNewsletterEmail] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+    const tab = new URLSearchParams(location.search).get('tab');
+    if (tab && tabs.some((t) => t.id === tab)) setActiveTab(tab);
+  }, [location.search]);
 
   const handleContactSubmit = async (e) => {
     e.preventDefault();
+    const invalidEmail = emailError(contactForm.email);
+    const invalidPhone = phoneError(contactForm.phone, { required: false });
+    if (invalidEmail) { toast.error(invalidEmail); return; }
+    if (invalidPhone) { toast.error(invalidPhone); return; }
     setIsSubmitting(true);
     try {
-      await axios.post(`${API_URL}/api/contact/inquiry`, {
-        name: contactForm.name,
-        email: contactForm.email,
-        phone: contactForm.phone,
-        subject: contactForm.subject,
-        message: contactForm.message
-      });
+      await axios.post(`${API_URL}/api/contact/inquiry`, contactForm);
       toast.success('Thank you! We will get back to you shortly.');
-      if (!isAuthenticated) {
-        setContactForm({ name: '', email: '', phone: '', subject: '', message: '' });
-      } else {
-        setContactForm(prev => ({ ...prev, subject: '', message: '' }));
-      }
-    } catch (error) {
+      setContactForm({ name: '', email: '', phone: '', subject: '', message: '' });
+    } catch {
       toast.error('Failed to send message. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -145,6 +81,20 @@ export const Contact = () => {
 
   const handleQuoteSubmit = async (e) => {
     e.preventDefault();
+    const invalidEmail = emailError(quoteForm.email);
+    const invalidPhone = phoneError(quoteForm.phone);
+    if (invalidEmail) { toast.error(invalidEmail); return; }
+    if (invalidPhone) { toast.error(invalidPhone); return; }
+    if (!quoteForm.productCategories.length) {
+      toast.error('Select at least one product category');
+      return;
+    }
+    const selectedLabels = categoryOptions
+      .filter((opt) => quoteForm.productCategories.includes(opt.value))
+      .map((opt) => opt.label);
+    const categoryLine = selectedLabels.length
+      ? `Categories: ${selectedLabels.join(', ')}`
+      : `Categories: ${quoteForm.productCategories.join(', ')}`;
     setIsSubmitting(true);
     try {
       await axios.post(`${API_URL}/api/quotes`, {
@@ -152,26 +102,14 @@ export const Contact = () => {
         contact_person: quoteForm.contactPerson,
         email: quoteForm.email,
         phone: quoteForm.phone,
-        additional_notes: `Category: ${quoteForm.productCategory}\n${quoteForm.message}`,
-        items: []
+        additional_notes: `${categoryLine}\n${(quoteForm.message || '').trim()}`.trim(),
+        items: [],
       });
-      toast.success('Quote request received! We will send you a detailed quotation soon.');
-      if (!isAuthenticated) {
-        setQuoteForm({
-          facilityName: '',
-          contactPerson: '',
-          email: '',
-          phone: '',
-          productCategory: '',
-          specificProducts: '',
-          quantity: '',
-          message: ''
-        });
-      } else {
-        setQuoteForm(prev => ({ ...prev, productCategory: '', specificProducts: '', quantity: '', message: '' }));
-      }
-    } catch (error) {
-      toast.error('Failed to submit quote request. Please try again.');
+      toast.success('Quote request received!');
+      setQuoteForm({ facilityName: '', contactPerson: '', email: '', phone: '', productCategories: [], message: '' });
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      toast.error(typeof detail === 'string' ? detail : 'Failed to submit quote request. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -179,6 +117,10 @@ export const Contact = () => {
 
   const handleTrainingSubmit = async (e) => {
     e.preventDefault();
+    const invalidEmail = emailError(trainingForm.email);
+    const invalidPhone = phoneError(trainingForm.phone);
+    if (invalidEmail) { toast.error(invalidEmail); return; }
+    if (invalidPhone) { toast.error(invalidPhone); return; }
     setIsSubmitting(true);
     try {
       await axios.post(`${API_URL}/api/training/register`, {
@@ -187,26 +129,16 @@ export const Contact = () => {
         email: trainingForm.email,
         phone: trainingForm.phone,
         training_type: trainingForm.trainingType,
-        number_of_participants: parseInt(trainingForm.numberOfParticipants) || 1,
+        number_of_participants: parseInt(trainingForm.numberOfParticipants, 10) || 1,
         preferred_date: trainingForm.preferredDate,
-        message: trainingForm.message
+        message: trainingForm.message,
       });
-      toast.success('Training registration received! We will contact you to schedule.');
-      if (!isAuthenticated) {
-        setTrainingForm({
-          facilityName: '',
-          contactPerson: '',
-          email: '',
-          phone: '',
-          trainingType: '',
-          numberOfParticipants: '',
-          preferredDate: '',
-          message: ''
-        });
-      } else {
-        setTrainingForm(prev => ({ ...prev, trainingType: '', numberOfParticipants: '', preferredDate: '', message: '' }));
-      }
-    } catch (error) {
+      toast.success('Training registration received!');
+      setTrainingForm({
+        facilityName: '', contactPerson: '', email: '', phone: '',
+        trainingType: '', numberOfParticipants: '', preferredDate: '', message: '',
+      });
+    } catch {
       toast.error('Failed to submit registration. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -215,421 +147,326 @@ export const Contact = () => {
 
   const handleNewsletterSubmit = async (e) => {
     e.preventDefault();
+    const invalidEmail = emailError(newsletterEmail);
+    if (invalidEmail) { toast.error(invalidEmail); return; }
+    setNewsletterLoading(true);
+    setNewsletterResult(null);
     try {
-      await axios.post(`${API_URL}/api/newsletter/subscribe`, { email: newsletterEmail });
-      toast.success('Successfully subscribed to our newsletter!');
-      setNewsletterEmail('');
-    } catch (error) {
-      toast.error('Failed to subscribe. Please try again.');
+      const { data } = await axios.post(`${API_URL}/api/newsletter/subscribe`, { email: newsletterEmail });
+      const status = data?.status || 'created';
+      setNewsletterResult({
+        status,
+        email: data?.email || newsletterEmail,
+        message: data?.message || 'Thanks for subscribing.',
+        unsubscribeUrl: data?.unsubscribe_url || null,
+      });
+      if (status !== 'already_subscribed') {
+        setNewsletterEmail('');
+      }
+    } catch (err) {
+      toast.error(formatApiError(err, 'Failed to subscribe. Please try again.'));
+    } finally {
+      setNewsletterLoading(false);
     }
   };
 
-  const tabs = [
-    { id: 'contact', label: 'General Inquiry', icon: MessageSquare },
-    { id: 'quote', label: 'Request Quote', icon: FileText },
-    { id: 'training', label: 'Training Registration', icon: GraduationCap }
-  ];
-
-  const renderContactInfoCards = () => (
-    <div className="grid md:grid-cols-3 gap-6 mb-16">
-      <Card className="border-2 border-gray-100 hover:border-[#006332] hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 group bg-white/80 backdrop-blur-sm">
-        <CardHeader>
-          <div className="w-14 h-14 bg-gradient-to-br from-[#006332] to-[#00a550] rounded-xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-500">
-            <MapPin className="w-7 h-7 text-white" />
-          </div>
-          <CardTitle className="text-xl">Visit Us</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-gray-700 text-sm leading-relaxed">
-            {contactInfo.address}<br />
-            {contactInfo.poBox}
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card className="border-2 border-gray-100 hover:border-[#006332] hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 group bg-white/80 backdrop-blur-sm">
-        <CardHeader>
-          <div className="w-14 h-14 bg-gradient-to-br from-[#006332] to-[#00a550] rounded-xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-500">
-            <Phone className="w-7 h-7 text-white" />
-          </div>
-          <CardTitle className="text-xl">Call Us</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <a href={`tel:${contactInfo.phone}`} className="text-gray-700 hover:text-[#006332] transition-colors duration-300 font-medium">
-            {contactInfo.phone}
-          </a>
-          <p className="text-sm text-gray-500 mt-2">{contactInfo.working_hours}</p>
-        </CardContent>
-      </Card>
-
-      <Card className="border-2 border-gray-100 hover:border-[#006332] hover:shadow-2xl transition-all duration-500 transform hover:-translate-y-2 group bg-white/80 backdrop-blur-sm">
-        <CardHeader>
-          <div className="w-14 h-14 bg-gradient-to-br from-[#006332] to-[#00a550] rounded-xl flex items-center justify-center mb-4 shadow-lg group-hover:scale-110 transition-transform duration-500">
-            <Mail className="w-7 h-7 text-white" />
-          </div>
-          <CardTitle className="text-xl">Email Us</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <a href={`mailto:${contactInfo.email}`} className="text-gray-700 hover:text-[#006332] transition-colors duration-300 font-medium break-all">
-            {contactInfo.email}
-          </a>
-          <p className="text-sm text-gray-500 mt-2">We'll respond within 24 hours</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  const renderTabButtons = () => (
-    <div className="flex flex-wrap gap-4 mb-8 justify-center">
-      {tabs.map((tab) => {
-        const Icon = tab.icon;
-        const isActive = activeTab === tab.id;
-        const activeClass = 'bg-gradient-to-r from-[#006332] to-[#00a550] text-white scale-105';
-        const inactiveClass = 'bg-white/80 backdrop-blur-sm text-gray-700 hover:bg-white border-2 border-gray-200 hover:border-[#006332]/30';
-        
-        return (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`group relative px-8 py-4 rounded-2xl font-semibold text-base transition-all duration-500 flex items-center gap-3 shadow-lg hover:shadow-2xl transform hover:-translate-y-1 ${isActive ? activeClass : inactiveClass}`}
-          >
-            <Icon className={`w-5 h-5 transition-transform duration-300 ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-            <span>{tab.label}</span>
-            {isActive && (
-              <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-3 h-3 bg-gradient-to-r from-[#006332] to-[#00a550] rounded-full shadow-lg" />
-            )}
-          </button>
-        );
-      })}
-    </div>
-  );
-
   return (
-    <div className="min-h-screen pt-36 lg:pt-40 pb-20 px-4 relative overflow-hidden">
-      {/* Animated Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-green-50 via-white to-blue-50 opacity-50" />
-      <div className="absolute inset-0 opacity-30">
-        <div className="absolute top-20 left-10 w-96 h-96 bg-[#006332] rounded-full blur-3xl animate-pulse" />
-        <div className="absolute bottom-20 right-10 w-[500px] h-[500px] bg-[#00a550] rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1s' }} />
-      </div>
+    <div className="min-h-screen pb-20 bg-cream">
+      <div className="max-w-6xl mx-auto px-6 py-12">
+        <div className="grid lg:grid-cols-5 gap-12 lg:gap-16">
+          {/* Left — contact details */}
+          <div className="lg:col-span-2 lg:sticky lg:top-28 lg:self-start">
+            <div className="flex items-center gap-3 mb-6">
+              <span className="editorial-label">Contact</span>
+              <span className="w-8 h-px bg-copper" />
+              <span className="editorial-label">We respond within 24h</span>
+            </div>
+            <h1 className="editorial-headline mb-6">
+              Let&apos;s talk about your{' '}
+              <span className="text-copper">facility</span>.
+            </h1>
+            <p className="text-ink-muted text-sm leading-relaxed mb-10 max-w-sm">
+              Whether you need equipment, training, or have questions — our team is ready to assist you.
+            </p>
 
-      <div className="container mx-auto relative z-10">
-        {/* Header with Animation */}
-        <div className="mb-16 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-sm rounded-full border border-[#006332]/20 mb-6 shadow-lg">
-            <Sparkles className="w-4 h-4 text-[#006332]" />
-            <span className="text-sm font-semibold text-[#006332]">We're Here to Help</span>
-          </div>
-          <h1 className="text-5xl lg:text-6xl font-bold text-gray-900 mb-4">
-            Get In Touch
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Whether you need equipment, training, or have questions, our team is ready to assist you
-          </p>
-        </div>
-
-        {renderContactInfoCards()}
-
-        {/* Forms Section */}
-        <div className="mb-16">
-          {renderTabButtons()}
-
-          {/* Tab Content */}
-          <div className="relative">
-            {/* Contact Form */}
-            {activeTab === 'contact' && (
-              <Card className="border-2 border-gray-200 shadow-2xl bg-white/90 backdrop-blur-md">
-                <CardHeader>
-                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                    <div>
-                      <CardTitle className="text-3xl">Send Us a Message</CardTitle>
-                      <CardDescription className="text-base">Fill out the form and we&apos;ll get back to you soon</CardDescription>
-                    </div>
-                    {isAuthenticated && (
-                      <div className="flex items-center gap-2 text-sm text-[#006332] bg-green-50 px-3 py-1.5 rounded-full">
-                        <User className="w-4 h-4" />
-                        <span>Pre-filled from profile</span>
-                      </div>
+            <dl className="space-y-8 text-sm">
+              {(info.address || info.poBox) && (
+                <div className="editorial-accent-border">
+                  <dt className="editorial-label mb-2">Location</dt>
+                  <dd className="text-ink-muted leading-relaxed">
+                    {info.googleMapsUrl ? (
+                      <a href={info.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-ink hover:text-copper transition-colors">
+                        {info.address}
+                      </a>
+                    ) : (
+                      info.address
                     )}
+                    {info.address && info.poBox ? <br /> : null}
+                    {info.poBox}
+                  </dd>
+                </div>
+              )}
+              {info.phone && (
+                <div className="editorial-accent-border">
+                  <dt className="editorial-label mb-2">Phone</dt>
+                  <dd>
+                    <a href={`tel:${phoneHref}`} className="text-ink hover:text-copper transition-colors">
+                      {info.phone}
+                    </a>
+                    {info.workingHours ? (
+                      <p className="text-ink-faint text-xs mt-1.5">{info.workingHours}</p>
+                    ) : null}
+                  </dd>
+                </div>
+              )}
+              {info.email && (
+                <div className="editorial-accent-border">
+                  <dt className="editorial-label mb-2">Email</dt>
+                  <dd>
+                    <a href={`mailto:${info.email}`} className="text-ink hover:text-copper transition-colors break-all">
+                      {info.email}
+                    </a>
+                  </dd>
+                </div>
+              )}
+              {webHref && (
+                <div className="editorial-accent-border">
+                  <dt className="editorial-label mb-2">Website</dt>
+                  <dd>
+                    <a href={webHref} target="_blank" rel="noopener noreferrer" className="text-ink hover:text-copper transition-colors break-all">
+                      {websiteLabel(info.website)}
+                    </a>
+                  </dd>
+                </div>
+              )}
+            </dl>
+
+            <div className="mt-10 pt-8 section-divider flex flex-wrap gap-4 text-xs">
+              <Link to="/products" className="text-ink-muted hover:text-copper transition-colors">Browse store</Link>
+              <Link to="/quote-cart" className="text-ink-muted hover:text-copper transition-colors">Quote cart</Link>
+              <Link to="/training" className="text-ink-muted hover:text-copper transition-colors">Training & service</Link>
+            </div>
+          </div>
+
+          {/* Right — forms */}
+          <div className="lg:col-span-3">
+            <div className="mb-8">
+              <SheetTabs tabs={tabs} value={activeTab} onChange={setActiveTab} />
+            </div>
+
+            <div className="editorial-panel">
+              {activeTab === 'contact' && (
+                <form onSubmit={handleContactSubmit} className="space-y-5">
+                  <div className="grid sm:grid-cols-2 gap-5">
+                    <EditorialField label="Full name" required>
+                      <input type="text" required value={contactForm.name} onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })} className={inputClass} />
+                    </EditorialField>
+                    <EditorialField label="Email" required error={liveEmailError(contactForm.email)}>
+                      <input type="email" autoComplete="email" required value={contactForm.email} onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })} className={invalidFieldClass(liveEmailError(contactForm.email), inputClass)} />
+                    </EditorialField>
                   </div>
-                  {!isAuthenticated && (
-                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <p className="text-sm text-blue-800">
-                        <Link to="/login" className="font-semibold underline hover:no-underline">Sign in</Link> to auto-fill your information
-                      </p>
-                    </div>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleContactSubmit} className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="name" className="text-base font-semibold">Full Name *</Label>
-                        <Input
-                          id="name"
-                          placeholder="John Doe"
-                          value={contactForm.name}
-                          onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
-                          required
-                          className="h-12 text-base"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="email" className="text-base font-semibold">Email Address *</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          placeholder="john@example.com"
-                          value={contactForm.email}
-                          onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-                          required
-                          className="h-12 text-base"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label htmlFor="phone" className="text-base font-semibold">Phone Number</Label>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          placeholder="+254 700 000 000"
-                          value={contactForm.phone}
-                          onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
-                          className="h-12 text-base"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="subject" className="text-base font-semibold">Subject *</Label>
-                        <Input
-                          id="subject"
-                          placeholder="How can we help?"
-                          value={contactForm.subject}
-                          onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })}
-                          required
-                          className="h-12 text-base"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="message" className="text-base font-semibold">Message *</Label>
-                      <Textarea
-                        id="message"
-                        placeholder="Tell us more..."
-                        rows={6}
-                        value={contactForm.message}
-                        onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
-                        required
-                        className="text-base resize-none"
-                      />
-                    </div>
-                    <Button type="submit" size="lg" className="bg-gradient-to-r from-[#006332] to-[#00a550] hover:from-[#005028] hover:to-[#008844] text-white shadow-lg">
-                      Send Message
-                      <Send className="ml-2 w-5 h-5" />
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
+                  <div className="grid sm:grid-cols-2 gap-5">
+                    <EditorialField label="Phone" error={livePhoneError(contactForm.phone)}>
+                      <input type="tel" inputMode="tel" autoComplete="tel" value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} className={invalidFieldClass(livePhoneError(contactForm.phone), inputClass)} />
+                    </EditorialField>
+                    <EditorialField label="Subject" required>
+                      <input type="text" required value={contactForm.subject} onChange={(e) => setContactForm({ ...contactForm, subject: e.target.value })} className={inputClass} />
+                    </EditorialField>
+                  </div>
+                  <EditorialField label="Message" required>
+                    <textarea required rows={5} value={contactForm.message} onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })} className={`${inputClass} resize-none`} />
+                  </EditorialField>
+                  <button type="submit" disabled={isSubmitting} className="btn-primary">
+                    {isSubmitting ? 'Sending…' : 'Send message'}
+                  </button>
+                </form>
+              )}
 
-            {/* Quote Form */}
-            {activeTab === 'quote' && (
-              <Card className="border-2 border-gray-200 shadow-2xl bg-white/90 backdrop-blur-md">
-                <CardHeader>
-                  <CardTitle className="text-3xl">Request a Quote</CardTitle>
-                  <CardDescription className="text-base">Tell us what you need</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleQuoteSubmit} className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label>Facility Name *</Label>
-                        <Input
-                          placeholder="Your Facility"
-                          value={quoteForm.facilityName}
-                          onChange={(e) => setQuoteForm({ ...quoteForm, facilityName: e.target.value })}
-                          required
-                          className="h-12"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Contact Person *</Label>
-                        <Input
-                          placeholder="Full Name"
-                          value={quoteForm.contactPerson}
-                          onChange={(e) => setQuoteForm({ ...quoteForm, contactPerson: e.target.value })}
-                          required
-                          className="h-12"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label>Email *</Label>
-                        <Input
-                          type="email"
-                          placeholder="email@facility.com"
-                          value={quoteForm.email}
-                          onChange={(e) => setQuoteForm({ ...quoteForm, email: e.target.value })}
-                          required
-                          className="h-12"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Phone *</Label>
-                        <Input
-                          type="tel"
-                          placeholder="+254 700 000 000"
-                          value={quoteForm.phone}
-                          onChange={(e) => setQuoteForm({ ...quoteForm, phone: e.target.value })}
-                          required
-                          className="h-12"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Product Category *</Label>
-                      <Select value={quoteForm.productCategory} onValueChange={(value) => setQuoteForm({ ...quoteForm, productCategory: value })}>
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Select category" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="diagnostic">Diagnostic Test Kits</SelectItem>
-                          <SelectItem value="hematology">Hematology & Blood Collection</SelectItem>
-                          <SelectItem value="equipment">Equipment & Instruments</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Message</Label>
-                      <Textarea
-                        placeholder="Additional details..."
-                        rows={4}
-                        value={quoteForm.message}
-                        onChange={(e) => setQuoteForm({ ...quoteForm, message: e.target.value })}
-                        className="resize-none"
-                      />
-                    </div>
-                    <Button type="submit" size="lg" className="bg-gradient-to-r from-[#006332] to-[#00a550] hover:from-[#005028] hover:to-[#008844] text-white shadow-lg">
-                      Submit Quote
-                      <Send className="ml-2 w-5 h-5" />
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
+              {activeTab === 'quote' && (
+                <form onSubmit={handleQuoteSubmit} className="space-y-5">
+                  <p className="text-xs text-ink-muted">
+                    Or{' '}
+                    <Link to="/quote-cart" className="text-copper hover:underline">review items in your quote cart</Link>.
+                  </p>
+                  <div className="grid sm:grid-cols-2 gap-5">
+                    <EditorialField label="Facility name" required>
+                      <input type="text" required value={quoteForm.facilityName} onChange={(e) => setQuoteForm({ ...quoteForm, facilityName: e.target.value })} className={inputClass} />
+                    </EditorialField>
+                    <EditorialField label="Contact person" required>
+                      <input type="text" required value={quoteForm.contactPerson} onChange={(e) => setQuoteForm({ ...quoteForm, contactPerson: e.target.value })} className={inputClass} />
+                    </EditorialField>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-5">
+                    <EditorialField label="Email" required error={liveEmailError(quoteForm.email)}>
+                      <input type="email" autoComplete="email" required value={quoteForm.email} onChange={(e) => setQuoteForm({ ...quoteForm, email: e.target.value })} className={invalidFieldClass(liveEmailError(quoteForm.email), inputClass)} />
+                    </EditorialField>
+                    <EditorialField label="Phone" required error={livePhoneError(quoteForm.phone)}>
+                      <input type="tel" inputMode="tel" autoComplete="tel" required value={quoteForm.phone} onChange={(e) => setQuoteForm({ ...quoteForm, phone: e.target.value })} className={invalidFieldClass(livePhoneError(quoteForm.phone), inputClass)} />
+                    </EditorialField>
+                  </div>
+                  <EditorialField label="Product category" required>
+                    <FilterMultiSelect
+                      value={quoteForm.productCategories}
+                      onChange={(next) => setQuoteForm({ ...quoteForm, productCategories: next })}
+                      options={categoryOptions}
+                      placeholder={categoriesLoading ? 'Loading categories…' : 'Select categories'}
+                      searchPlaceholder="Search categories…"
+                      disabled={categoriesLoading || !categoryOptions.length}
+                      triggerClassName={categoryTriggerClass}
+                    />
+                  </EditorialField>
+                  <EditorialField label="Additional details">
+                    <textarea
+                      rows={4}
+                      value={quoteForm.message}
+                      onChange={(e) => setQuoteForm({ ...quoteForm, message: e.target.value })}
+                      className={`${inputClass} resize-none text-left`}
+                      style={{ textIndent: 0 }}
+                    />
+                  </EditorialField>
+                  <button type="submit" disabled={isSubmitting} className="btn-primary">
+                    {isSubmitting ? 'Submitting…' : 'Submit quote'}
+                  </button>
+                </form>
+              )}
 
-            {/* Training Form */}
-            {activeTab === 'training' && (
-              <Card className="border-2 border-gray-200 shadow-2xl bg-white/90 backdrop-blur-md">
-                <CardHeader>
-                  <CardTitle className="text-3xl">Register for Training</CardTitle>
-                  <CardDescription className="text-base">Schedule training for your team</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handleTrainingSubmit} className="space-y-6">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label>Facility Name *</Label>
-                        <Input
-                          placeholder="Your Facility"
-                          value={trainingForm.facilityName}
-                          onChange={(e) => setTrainingForm({ ...trainingForm, facilityName: e.target.value })}
-                          required
-                          className="h-12"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Contact Person *</Label>
-                        <Input
-                          placeholder="Full Name"
-                          value={trainingForm.contactPerson}
-                          onChange={(e) => setTrainingForm({ ...trainingForm, contactPerson: e.target.value })}
-                          required
-                          className="h-12"
-                        />
-                      </div>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label>Email *</Label>
-                        <Input
-                          type="email"
-                          placeholder="email@facility.com"
-                          value={trainingForm.email}
-                          onChange={(e) => setTrainingForm({ ...trainingForm, email: e.target.value })}
-                          required
-                          className="h-12"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Phone *</Label>
-                        <Input
-                          type="tel"
-                          placeholder="+254 700 000 000"
-                          value={trainingForm.phone}
-                          onChange={(e) => setTrainingForm({ ...trainingForm, phone: e.target.value })}
-                          required
-                          className="h-12"
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Training Type *</Label>
-                      <Select value={trainingForm.trainingType} onValueChange={(value) => setTrainingForm({ ...trainingForm, trainingType: value })}>
-                        <SelectTrigger className="h-12">
-                          <SelectValue placeholder="Select training" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="analyzer">Diagnostic & Laboratory Analyzer</SelectItem>
-                          <SelectItem value="microscopy">Microscopy & Imaging</SelectItem>
-                          <SelectItem value="maintenance">Routine Maintenance</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Message</Label>
-                      <Textarea
-                        placeholder="Additional details..."
-                        rows={4}
-                        value={trainingForm.message}
-                        onChange={(e) => setTrainingForm({ ...trainingForm, message: e.target.value })}
-                        className="resize-none"
-                      />
-                    </div>
-                    <Button type="submit" size="lg" className="bg-gradient-to-r from-[#006332] to-[#00a550] hover:from-[#005028] hover:to-[#008844] text-white shadow-lg">
-                      Submit Registration
-                      <Send className="ml-2 w-5 h-5" />
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
+              {activeTab === 'training' && (
+                <form onSubmit={handleTrainingSubmit} className="space-y-5">
+                  <div className="grid sm:grid-cols-2 gap-5">
+                    <EditorialField label="Facility name" required>
+                      <input type="text" required value={trainingForm.facilityName} onChange={(e) => setTrainingForm({ ...trainingForm, facilityName: e.target.value })} className={inputClass} />
+                    </EditorialField>
+                    <EditorialField label="Contact person" required>
+                      <input type="text" required value={trainingForm.contactPerson} onChange={(e) => setTrainingForm({ ...trainingForm, contactPerson: e.target.value })} className={inputClass} />
+                    </EditorialField>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-5">
+                    <EditorialField label="Email" required error={liveEmailError(trainingForm.email)}>
+                      <input type="email" autoComplete="email" required value={trainingForm.email} onChange={(e) => setTrainingForm({ ...trainingForm, email: e.target.value })} className={invalidFieldClass(liveEmailError(trainingForm.email), inputClass)} />
+                    </EditorialField>
+                    <EditorialField label="Phone" required error={livePhoneError(trainingForm.phone)}>
+                      <input type="tel" inputMode="tel" autoComplete="tel" required value={trainingForm.phone} onChange={(e) => setTrainingForm({ ...trainingForm, phone: e.target.value })} className={invalidFieldClass(livePhoneError(trainingForm.phone), inputClass)} />
+                    </EditorialField>
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-5">
+                    <EditorialField label="Training type" required>
+                      <select required value={trainingForm.trainingType} onChange={(e) => setTrainingForm({ ...trainingForm, trainingType: e.target.value })} className={inputClass}>
+                        <option value="">Select training</option>
+                        <option value="analyzer">Diagnostic & laboratory analyzer</option>
+                        <option value="microscopy">Microscopy & imaging</option>
+                        <option value="maintenance">Routine maintenance</option>
+                      </select>
+                    </EditorialField>
+                    <EditorialField label="Participants">
+                      <input type="number" min={1} value={trainingForm.numberOfParticipants} onChange={(e) => setTrainingForm({ ...trainingForm, numberOfParticipants: e.target.value })} className={inputClass} />
+                    </EditorialField>
+                  </div>
+                  <EditorialField label="Preferred date">
+                    <input type="date" value={trainingForm.preferredDate} onChange={(e) => setTrainingForm({ ...trainingForm, preferredDate: e.target.value })} className={inputClass} />
+                  </EditorialField>
+                  <EditorialField label="Additional details">
+                    <textarea rows={4} value={trainingForm.message} onChange={(e) => setTrainingForm({ ...trainingForm, message: e.target.value })} className={`${inputClass} resize-none`} />
+                  </EditorialField>
+                  <button type="submit" disabled={isSubmitting} className="btn-primary">
+                    {isSubmitting ? 'Submitting…' : 'Submit registration'}
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Newsletter */}
-        <div className="relative overflow-hidden rounded-3xl shadow-2xl">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#006332] via-[#00a550] to-[#006332] opacity-95" />
-          <div className="relative z-10 p-12 text-white text-center">
-            <Mail className="w-16 h-16 mx-auto mb-6" />
-            <h2 className="text-4xl font-bold mb-4">Subscribe to Our Newsletter</h2>
-            <p className="text-xl mb-8 opacity-90">Stay updated with the latest medical equipment and healthcare innovations</p>
-            <form onSubmit={handleNewsletterSubmit} className="flex gap-4 max-w-md mx-auto">
-              <Input
-                type="email"
-                placeholder="Your email"
-                value={newsletterEmail}
-                onChange={(e) => setNewsletterEmail(e.target.value)}
-                required
-                className="bg-white text-gray-900 flex-1 h-14"
-              />
-              <Button type="submit" size="lg" className="bg-white text-[#006332] hover:bg-gray-100 h-14">
-                Subscribe
-              </Button>
-            </form>
+        <section className="mt-24 pt-16 section-divider">
+          <div className="mx-auto max-w-xl text-center">
+            <p className="editorial-label mb-4">Newsletter</p>
+            {newsletterResult?.status === 'already_subscribed' ? (
+              <div className="rounded-[4px] border border-ink/10 bg-white px-8 py-10 sm:px-10 text-left shadow-[0_1px_0_rgba(26,26,26,0.04)]">
+                <p className="editorial-label text-copper mb-3">Already subscribed</p>
+                <h2 className="text-2xl font-bold tracking-tight text-ink mb-3">
+                  You&apos;re already on our list
+                </h2>
+                <p className="text-sm text-ink-muted leading-relaxed mb-2">
+                  Your email address{' '}
+                  <span className="font-semibold text-ink break-all">{newsletterResult.email}</span>
+                </p>
+                <p className="text-sm text-ink-muted leading-relaxed mb-8">
+                  We&apos;ve sent a confirmation to that inbox. No need to sign up again.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    className="btn-primary flex-1 justify-center"
+                    onClick={() => {
+                      setNewsletterResult(null);
+                      setNewsletterEmail('');
+                    }}
+                  >
+                    Use a different email
+                  </button>
+                  {newsletterResult.unsubscribeUrl ? (
+                    <a href={newsletterResult.unsubscribeUrl} className="btn-secondary flex-1 justify-center text-center">
+                      Unsubscribe
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            ) : newsletterResult ? (
+              <div className="rounded-[4px] border border-ink/10 bg-white px-8 py-10 sm:px-10 text-left shadow-[0_1px_0_rgba(26,26,26,0.04)]">
+                <p className="editorial-label text-brand mb-3">Subscribed</p>
+                <h2 className="text-2xl font-bold tracking-tight text-ink mb-3">
+                  Thanks for joining
+                </h2>
+                <p className="text-sm text-ink-muted leading-relaxed mb-2">
+                  Your email address{' '}
+                  <span className="font-semibold text-ink break-all">{newsletterResult.email}</span>
+                </p>
+                <p className="text-sm text-ink-muted leading-relaxed mb-8">
+                  {newsletterResult.message} Check your inbox for a welcome email.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <button
+                    type="button"
+                    className="btn-primary flex-1 justify-center"
+                    onClick={() => setNewsletterResult(null)}
+                  >
+                    Done
+                  </button>
+                  {newsletterResult.unsubscribeUrl ? (
+                    <a href={newsletterResult.unsubscribeUrl} className="btn-secondary flex-1 justify-center text-center">
+                      Unsubscribe
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-[4px] border border-ink/10 bg-white px-8 py-10 sm:px-10 text-left shadow-[0_1px_0_rgba(26,26,26,0.04)]">
+                <h2 className="text-2xl font-bold tracking-tight text-ink mb-3">
+                  Stay informed
+                </h2>
+                <p className="text-sm text-ink-muted leading-relaxed mb-8">
+                  Equipment updates, training programmes, and healthcare innovation — delivered to your inbox.
+                </p>
+                <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-3">
+                  <input
+                    type="email"
+                    placeholder="Your email"
+                    required
+                    value={newsletterEmail}
+                    onChange={(e) => setNewsletterEmail(e.target.value)}
+                    className={`${invalidFieldClass(liveEmailError(newsletterEmail), inputClass)} sm:flex-1`}
+                  />
+                  <button type="submit" disabled={newsletterLoading} className="btn-primary whitespace-nowrap disabled:opacity-60">
+                    {newsletterLoading ? 'Subscribing…' : 'Subscribe'}
+                  </button>
+                </form>
+                <p className="mt-4 text-xs text-ink-faint">
+                  You can unsubscribe at any time from the link in our emails.
+                </p>
+              </div>
+            )}
           </div>
-        </div>
+        </section>
       </div>
     </div>
   );

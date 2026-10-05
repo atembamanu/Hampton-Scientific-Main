@@ -1,0 +1,1 @@
+ALTER TABLE product_categories ADD COLUMN IF NOT EXISTS nav_group VARCHAR(32) NOT NULL DEFAULT 'other';

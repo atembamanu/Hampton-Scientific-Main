@@ -174,7 +174,9 @@
 <body>
     <div class="header">
         <div class="company-info">
-            <img src="{{ logo_data }}" alt="Hampton Scientific Limited" style="width: 200px; height: 40px;">
+            {% if logo_data %}
+            <img src="{{ logo_data }}" alt="Hampton Scientific Limited" style="width: 220px; height: auto; max-height: 48px; object-fit: contain;">
+            {% endif %}
             <div class="company-address">
                 <p>{{ company.address_line1 }}</p>
                 <p>{{ company.address_line2 }}</p>
@@ -190,13 +192,18 @@
         <div class="bill-to">
             <div class="section-title">Bill To</div>
             <div style="font-weight: bold; font-size: 14px;">{{ customer_name }}</div>
+            {% if customer_branch %}
+            <p class="customer-details">{{ customer_branch }}</p>
+            {% endif %}
             <p class="customer-details">{{ customer_email }}</p>
             <p class="customer-details">{{ customer_phone }}</p>
             <p class="customer-details">{{ customer_address }}</p>
         </div>
         {% if is_paid %}
         <div class="watermark-container">
+            {% if paid_stamp_data %}
             <img src="{{ paid_stamp_data }}" class="paid-stamp" alt="PAID" style="width: 100px; height: auto;">
+            {% endif %}
         </div>
         {% endif %}
         <table class="meta-table">

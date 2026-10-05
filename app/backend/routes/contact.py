@@ -9,12 +9,26 @@ from models.contact import (
     ContactInquiryCreate,
     NewsletterSubscription,
     NewsletterSubscribe,
+    NewsletterSubscribeResponse,
+    NewsletterUnsubscribe,
+    NewsletterUnsubscribeResponse,
 )
 from models.user import UserResponse
 from utils.auth import get_admin_user
-from utils.email_service import send_contact_inquiry_email, send_newsletter_welcome_email
+from utils.permissions import require_company_permission
+from utils.email_service import (
+    send_contact_inquiry_email,
+    send_newsletter_already_subscribed_email,
+    send_newsletter_welcome_email,
+)
+from utils.newsletter_tokens import (
+    newsletter_unsubscribe_url,
+    verify_newsletter_unsub_token,
+)
 from utils.email_followup import get_followup_settings, update_followup_settings, get_email_logs
+from utils.contact_validation import raise_if_invalid_email, raise_if_invalid_phone
 from utils.logger import logger
+from utils.site_content import normalize_impact_stats, normalize_partners
 from deps import get_db
 from repositories import contact as contact_repo
 
@@ -43,32 +57,87 @@ async def create_contact_inquiry(
     
     return inquiry
 
-@router.post("/newsletter/subscribe", response_model=NewsletterSubscription)
+@router.post("/newsletter/subscribe", response_model=NewsletterSubscribeResponse)
 async def subscribe_newsletter(
     subscribe_data: NewsletterSubscribe,
     db: Session = Depends(get_db),
 ):
     """Subscribe to newsletter (public endpoint)."""
-    # Check if already subscribed
-    existing = contact_repo.get_newsletter_by_email(db, subscribe_data.email)
+    email = str(subscribe_data.email).strip().lower()
+    existing = contact_repo.get_newsletter_by_email(db, email)
+    unsub_url = newsletter_unsubscribe_url(email)
+
+    if existing and existing.subscribed:
+        send_newsletter_already_subscribed_email(email)
+        return NewsletterSubscribeResponse(
+            id=existing.id,
+            email=existing.email,
+            subscribed=True,
+            subscribed_at=existing.subscribed_at,
+            status="already_subscribed",
+            message="You're already on our newsletter list.",
+            unsubscribe_url=unsub_url,
+        )
+
     if existing:
-        if existing.subscribed:
-            return NewsletterSubscription.from_orm(existing)
-        else:
-            # Resubscribe
-            updated = contact_repo.resubscribe_newsletter(db, existing)
-            return NewsletterSubscription.from_orm(updated)
-    
-    subscription_row = contact_repo.create_newsletter_subscription(
-        db, subscribe_data.email
+        updated = contact_repo.resubscribe_newsletter(db, existing)
+        send_newsletter_welcome_email(updated.email)
+        logger.info(f"Newsletter resubscribed: {updated.email}")
+        return NewsletterSubscribeResponse(
+            id=updated.id,
+            email=updated.email,
+            subscribed=True,
+            subscribed_at=updated.subscribed_at,
+            status="resubscribed",
+            message="Welcome back — you're subscribed again.",
+            unsubscribe_url=unsub_url,
+        )
+
+    subscription_row = contact_repo.create_newsletter_subscription(db, email)
+    send_newsletter_welcome_email(subscription_row.email)
+    logger.info(f"New newsletter subscription: {subscription_row.email}")
+    return NewsletterSubscribeResponse(
+        id=subscription_row.id,
+        email=subscription_row.email,
+        subscribed=True,
+        subscribed_at=subscription_row.subscribed_at,
+        status="created",
+        message="Thanks for subscribing — check your inbox for a welcome email.",
+        unsubscribe_url=unsub_url,
     )
-    subscription = NewsletterSubscription.from_orm(subscription_row)
-    logger.info(f"New newsletter subscription: {subscription.email}")
-    
-    # Send welcome email
-    send_newsletter_welcome_email(subscription.email)
-    
-    return subscription
+
+
+@router.post("/newsletter/unsubscribe", response_model=NewsletterUnsubscribeResponse)
+async def unsubscribe_newsletter(
+    body: NewsletterUnsubscribe,
+    db: Session = Depends(get_db),
+):
+    """Public unsubscribe — requires signed token from email or subscribe response."""
+    email = str(body.email).strip().lower()
+    if not verify_newsletter_unsub_token(email, body.token):
+        raise HTTPException(status_code=400, detail="Invalid or expired unsubscribe link.")
+
+    existing = contact_repo.get_newsletter_by_email(db, email)
+    if not existing:
+        return NewsletterUnsubscribeResponse(
+            email=email,
+            subscribed=False,
+            message="This email is not on our newsletter list.",
+        )
+    if not existing.subscribed:
+        return NewsletterUnsubscribeResponse(
+            email=email,
+            subscribed=False,
+            message="You're already unsubscribed.",
+        )
+
+    contact_repo.unsubscribe_newsletter(db, existing)
+    logger.info(f"Newsletter unsubscribed: {email}")
+    return NewsletterUnsubscribeResponse(
+        email=email,
+        subscribed=False,
+        message="You've been unsubscribed. You won't receive further newsletter emails.",
+    )
 
 @router.get("/settings")
 async def get_settings(db: Session = Depends(get_db)):
@@ -105,6 +174,14 @@ async def get_settings(db: Session = Depends(get_db)):
                 if settings_row.default_include_vat is not None
                 else True
             ),
+            "impact_stats": normalize_impact_stats(
+                getattr(settings_row, "impact_stats", None),
+                fallback=getattr(settings_row, "impact_stats", None) is None,
+            ),
+            "partners": normalize_partners(
+                getattr(settings_row, "partners", None),
+                fallback=getattr(settings_row, "partners", None) is None,
+            ),
         }
     # Ensure payment defaults for existing documents missing these fields
     defaults = {
@@ -119,6 +196,8 @@ async def get_settings(db: Session = Depends(get_db)):
         "default_invoice_due_days": 14,
         "default_tax_rate": 16,
         "default_include_vat": True,
+        "impact_stats": normalize_impact_stats(None),
+        "partners": normalize_partners(None),
     }
     for key, val in defaults.items():
         if key not in settings:
@@ -130,7 +209,7 @@ async def get_settings(db: Session = Depends(get_db)):
 @router.put("/admin/settings")
 async def update_settings(
     settings_data: dict,
-    current_user: UserResponse = Depends(get_admin_user),
+    current_user: UserResponse = Depends(require_company_permission("settings")),
     db: Session = Depends(get_db),
 ):
     """Update site settings - Admin only."""
@@ -157,9 +236,19 @@ async def update_settings(
         "default_invoice_due_days",
         "default_tax_rate",
         "default_include_vat",
+        "impact_stats",
+        "partners",
     ]
     
     update_data = {k: v for k, v in settings_data.items() if k in allowed_fields}
+    if "email" in update_data:
+        raise_if_invalid_email(update_data.get("email") or "")
+    if "phone" in update_data:
+        raise_if_invalid_phone(update_data.get("phone") or "")
+    if "impact_stats" in update_data:
+        update_data["impact_stats"] = normalize_impact_stats(update_data.get("impact_stats"), fallback=False)
+    if "partners" in update_data:
+        update_data["partners"] = normalize_partners(update_data.get("partners"), fallback=False)
     update_data["updated_at"] = datetime.utcnow()
     update_data["updated_by"] = current_user.email
     
@@ -189,7 +278,7 @@ async def update_settings(
 
 @router.get("/admin/inquiries")
 async def get_all_inquiries(
-    current_user: UserResponse = Depends(get_admin_user),
+    current_user: UserResponse = Depends(require_company_permission("contact")),
     limit: int = 50,
     skip: int = 0,
     db: Session = Depends(get_db),
@@ -199,13 +288,13 @@ async def get_all_inquiries(
     total = contact_repo.count_contact_inquiries(db)
     
     return {
-        "inquiries": [ContactInquiry.from_orm(inq) for inq in inquiries],
+        "inquiries": [ContactInquiry.model_validate(inq) for inq in inquiries],
         "total": total
     }
 
 @router.get("/admin/email-settings")
 async def get_email_settings(
-    current_user: UserResponse = Depends(get_admin_user),
+    current_user: UserResponse = Depends(require_company_permission("settings")),
     db: Session = Depends(get_db),
 ):
     """Get email follow-up settings - Admin only."""
@@ -215,7 +304,7 @@ async def get_email_settings(
 @router.put("/admin/email-settings")
 async def update_email_settings(
     settings_data: dict,
-    current_user: UserResponse = Depends(get_admin_user),
+    current_user: UserResponse = Depends(require_company_permission("settings")),
     db: Session = Depends(get_db),
 ):
     """Update email follow-up settings - Admin only."""
@@ -227,7 +316,7 @@ async def update_email_settings(
 async def get_admin_email_logs(
     limit: int = 100,
     email_type: str = None,
-    current_user: UserResponse = Depends(get_admin_user),
+    current_user: UserResponse = Depends(require_company_permission("settings")),
     db: Session = Depends(get_db),
 ):
     """Get email logs - Admin only."""

@@ -21,7 +21,11 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 logger = logging.getLogger(__name__)
 
 TEMPLATES_DIR = Path(__file__).resolve().parent
-from utils.document_context import build_invoice_context, build_quote_context
+from utils.document_context import (
+    build_delivery_note_context,
+    build_invoice_context,
+    build_quote_context,
+)
 
 
 def _get_jinja_env() -> Environment:
@@ -37,15 +41,13 @@ async def _render_pdf_from_html(html: str) -> bytes:
     Renders HTML to PDF using the SHARED browser instance.
     Note: We import PDFManager here to avoid circular imports.
     """
-    from server import PDFManager 
-    
-    # We use the existing shared browser to open a new page
+    from server import PDFManager
+
+    await PDFManager.ensure_ready()
+
     page = await PDFManager.browser.new_page()
     try:
-        # Avoid writing to disk if possible; set content directly
-        await page.set_content(html)
-        await page.wait_for_load_state("networkidle")
-
+        await page.set_content(html, wait_until="load", timeout=15000)
         pdf_bytes: bytes = await page.pdf(
             format="A4",
             print_background=True,
@@ -101,6 +103,24 @@ async def generate_quote_pdf(
         quote_data,
         company_info,
         is_modified=is_modified,
+        logo_data=get_base64_image("/app/assets/hampton-logo.png"),
+    )
+
+    html = template.render(**context)
+    pdf_bytes = await _render_pdf_from_html(html)
+    return base64.b64encode(pdf_bytes).decode("utf-8")
+
+
+async def generate_delivery_note_pdf(
+    invoice_data: Dict[str, Any],
+    company_info: Dict[str, Any],
+) -> str:
+    """Generate delivery note PDF from invoice data. Returns base64-encoded PDF."""
+    env = _get_jinja_env()
+    template = env.get_template("delivery_note_template.html")
+    context = build_delivery_note_context(
+        invoice_data,
+        company_info,
         logo_data=get_base64_image("/app/assets/hampton-logo.png"),
     )
 

@@ -73,10 +73,10 @@ A modern informational website for Hampton Scientific Limited, a supplier and tr
 - Dynamic payment information from admin settings
 
 ## Technical Stack
-- **Frontend**: React, Tailwind CSS, Shadcn/UI, Axios
-- **Backend**: FastAPI, Pydantic, Motor, JWT, RBAC, apscheduler
-- **Database**: MongoDB
-- **Integrations**: emergentintegrations (chatbot), Resend (email), reportlab (PDF)
+- **Frontend**: React (`app/frontend`), Tailwind CSS, Shadcn/UI, Axios
+- **Backend**: FastAPI, Pydantic, SQLAlchemy, JWT, RBAC, apscheduler
+- **Database**: PostgreSQL
+- **Integrations**: Zoho SMTP (email), Playwright/HTML templates (PDF)
 
 ## DB Schema
 - **users**: `{..., role: 'admin' | 'customer'}`

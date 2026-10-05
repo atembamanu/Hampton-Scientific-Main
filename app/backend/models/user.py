@@ -3,11 +3,14 @@ from typing import Optional, Literal
 from datetime import datetime
 import uuid
 
+from utils.contact_validation import OptionalPhoneStr, PhoneStr
+from models.base import AppModel
+
 class UserCreate(BaseModel):
     firstName: str
     lastName: str
     email: EmailStr
-    phone: str
+    phone: PhoneStr
     password: str
     facilityName: str
     facilityType: Optional[str] = None
@@ -18,18 +21,29 @@ class UserCreate(BaseModel):
     class Config:
         from_attributes = True
 
-class AdminUserCreate(BaseModel):
-    """Model for admin creating users"""
+class CompanyStaffCreate(BaseModel):
     firstName: str
     lastName: str
     email: EmailStr
-    phone: str
+    phone: OptionalPhoneStr = ""
+    password: str
+    role: Literal["admin", "operations", "sales"] = "sales"
+
+    class Config:
+        from_attributes = True
+
+class AdminUserCreate(BaseModel):
+    """Legacy model kept for older admin create-user clients."""
+    firstName: str
+    lastName: str
+    email: EmailStr
+    phone: PhoneStr
     facilityName: str
     facilityType: Optional[str] = None
     address: Optional[str] = ""
     city: Optional[str] = ""
     postalCode: Optional[str] = None
-    role: Literal["admin", "customer"] = "customer"
+    role: Literal["admin", "operations", "sales", "customer"] = "customer"
     can_login: bool = True
 
     class Config:
@@ -39,7 +53,7 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
-class User(BaseModel):
+class User(AppModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     firstName: str
     lastName: str
@@ -59,7 +73,7 @@ class User(BaseModel):
     class Config:
         from_attributes = True
 
-class UserResponse(BaseModel):
+class UserResponse(AppModel):
     id: str
     firstName: str
     lastName: str
@@ -80,7 +94,7 @@ class UserResponse(BaseModel):
 class UserUpdate(BaseModel):
     firstName: Optional[str] = None
     lastName: Optional[str] = None
-    phone: Optional[str] = None
+    phone: OptionalPhoneStr = None
     facilityName: Optional[str] = None
     facilityType: Optional[str] = None
     address: Optional[str] = None

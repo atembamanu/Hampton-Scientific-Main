@@ -1,119 +1,89 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
-import { useAuth } from '../context/AuthContext';
 import { Loader2 } from 'lucide-react';
 
-import { Button } from '../components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
+import { useAuth } from '../context/AuthContext';
+import { isCompanyStaff } from '../utils/adminAuth';
+import { facilityHomePath } from '../utils/facilityHome';
+import { emailError, liveEmailError, invalidFieldClass } from '../utils/validation';
+import { EditorialField } from '../components/template/EditorialSection';
 import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
+import { HamptonLogo } from '../components/HamptonLogo';
 
 export const Login = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const location = useLocation();
+  const { login, logout, isAuthenticated, user } = useAuth();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  // Redirect if already logged in
-  React.useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/profile');
+  useEffect(() => {
+    if (isAuthenticated && isCompanyStaff(user)) {
+      logout();
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, user, logout]);
+
+  if (isAuthenticated && !isCompanyStaff(user)) {
+    navigate(facilityHomePath(user), { replace: true });
+    return null;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    
-    const result = await login(formData.email, formData.password);
-    
+    const invalidEmail = emailError(email);
+    if (invalidEmail) {
+      toast.error(invalidEmail);
+      return;
+    }
+    setLoading(true);
+    const result = await login(email, password);
+    setLoading(false);
     if (result.success) {
-      toast.success('Login successful! Welcome back.');
-      navigate('/profile');
+      if (isCompanyStaff(result.user)) {
+        logout();
+        toast.error('This sign-in is for facility users. Company staff should use the operations portal.');
+        return;
+      }
+      toast.success('Welcome back!');
+      const requested = location.state?.from;
+      const dest = requested && requested !== '/dashboard' ? requested : facilityHomePath(result.user);
+      navigate(dest);
     } else {
       toast.error(result.error);
     }
-    
-    setIsLoading(false);
   };
 
   return (
-    <div className="min-h-screen pt-36 lg:pt-40 pb-20 bg-gray-50 flex items-center">
-      <div className="container mx-auto px-4 max-w-md">
-        <div className="mb-8 text-center">
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-3">Welcome Back</h1>
-          <p className="text-base md:text-lg text-gray-600">
-            Sign in to your account
-          </p>
-        </div>
+    <div className="min-h-screen bg-cream flex items-center justify-center px-6 py-20">
+      <div className="w-full max-w-md">
+        <Link to="/" className="inline-block mb-8"><HamptonLogo size="small" /></Link>
+        <p className="editorial-label mb-2">Facility portal</p>
+        <h1 className="editorial-headline mb-8">Sign <span className="text-copper">in</span></h1>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-2xl">Sign In</CardTitle>
-            <CardDescription>Enter your credentials to access your account</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="john@facility.com"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  required
-                  disabled={isLoading}
-                  className="h-12"
-                  data-testid="login-email-input"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="Enter your password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                  disabled={isLoading}
-                  className="h-12"
-                  data-testid="login-password-input"
-                />
-              </div>
-              <Button 
-                type="submit" 
-                disabled={isLoading}
-                className="w-full bg-gradient-to-r from-[#006332] to-[#00a550] hover:from-[#005028] hover:to-[#008844] text-white shadow-lg hover:shadow-xl transition-all duration-300"
-                data-testid="login-submit-btn"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Signing In...
-                  </>
-                ) : (
-                  'Sign In'
-                )}
-              </Button>
-              <div className="text-center space-y-2">
-                <Link to="/forgot-password" className="text-gray-500 hover:text-[#006332] text-sm">
-                  Forgot your password?
-                </Link>
-                <div>
-                  <Link to="/register" className="text-[#006332] hover:underline">
-                    Don&apos;t have an account? Register here
-                  </Link>
-                </div>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
+        <form onSubmit={handleSubmit} className="editorial-panel p-6 sm:p-8 space-y-5">
+          <EditorialField label="Email" required error={liveEmailError(email)}>
+            <Input type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={invalidFieldClass(liveEmailError(email), 'bg-white/80')} required />
+          </EditorialField>
+          <EditorialField label="Password" required>
+            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="bg-white/80" required />
+          </EditorialField>
+          <button type="submit" disabled={loading} className="btn-primary w-full flex items-center justify-center gap-2">
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+            Sign in
+          </button>
+          <p className="text-center text-sm text-ink-muted">
+            <Link to="/forgot-password" className="text-copper hover:underline">Forgot password?</Link>
+          </p>
+        </form>
+
+        <p className="text-center text-sm text-ink-muted mt-6">
+          New facility? <Link to="/register" className="text-copper hover:underline">Register your facility</Link>
+        </p>
+        <p className="text-center text-sm text-ink-muted mt-3">
+          Company staff? <Link to="/sysadmin" className="text-copper hover:underline">Operations portal</Link>
+        </p>
       </div>
     </div>
   );

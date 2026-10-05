@@ -16,6 +16,7 @@ from utils.auth import (
 from utils.email_service import send_password_reset_email, send_welcome_email
 from utils.logger import logger
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 from deps import get_db
 from db.models import User as UserModel
 
@@ -97,7 +98,7 @@ async def login(
     db: Session = Depends(get_db),
 ):
     """Login user and return access token."""
-    email = credentials.get("email")
+    email = (credentials.get("email") or "").strip()
     password = credentials.get("password")
     
     if not email or not password:
@@ -105,7 +106,7 @@ async def login(
     
     user = (
         db.query(UserModel)
-        .filter(UserModel.email == email)
+        .filter(func.lower(UserModel.email) == email.lower())
         .one_or_none()
     )
 
@@ -114,34 +115,50 @@ async def login(
     
     if not getattr(user, "can_login", True):
         raise HTTPException(status_code=401, detail="Account is deactivated")
-    
-    # Create access token
-    access_token = create_access_token(data={"sub": email})
-    
+
+    from utils.permissions import reject_wrong_login_portal
+
+    reject_wrong_login_portal(user.role, credentials.get("portal"))
+
+    access_token = create_access_token(data={"sub": user.email})
+
+    from utils.facility_auth import build_auth_payload
+
+    user_payload = build_auth_payload(db, user)
     logger.info(f"User logged in: {email}")
-    
-    # Manually map ORM user to UserResponse (field names differ)
-    user_payload = {
-        "id": user.id,
-        "firstName": user.first_name,
-        "lastName": user.last_name,
-        "email": user.email,
-        "phone": user.phone,
-        "facilityName": user.facility_name,
-        "facilityType": user.facility_type,
-        "address": user.address,
-        "city": user.city,
-        "postalCode": user.postal_code,
-        "role": user.role,
-        "can_login": user.can_login,
-        "created_at": user.created_at,
-    }
-    
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
         "user": user_payload,
     }
+
+
+@router.post("/refresh")
+async def refresh_session(
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Issue a new 30-minute access token while the current session is still valid."""
+    user = (
+        db.query(UserModel)
+        .filter(UserModel.email == current_user.email)
+        .one_or_none()
+    )
+    if not user or not getattr(user, "can_login", True):
+        raise HTTPException(status_code=401, detail="Account is deactivated")
+
+    access_token = create_access_token(data={"sub": user.email})
+    from utils.facility_auth import build_auth_payload
+
+    logger.info(f"Session extended: {user.email}")
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "expires_in": 30 * 60,
+        "user": build_auth_payload(db, user),
+    }
+
 
 @router.post("/forgot-password")
 async def forgot_password(
@@ -161,6 +178,11 @@ async def forgot_password(
     if not user:
         # Don't reveal if email exists or not
         return {"message": "If the email exists, a reset link has been sent"}
+    if user.role == "branch_user":
+        raise HTTPException(
+            status_code=403,
+            detail="Branch personnel passwords are managed by your facility admin",
+        )
     
     # Generate reset token
     reset_token = str(uuid.uuid4())
@@ -209,6 +231,11 @@ async def reset_password(
     
     if not user:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
+    if user.role == "branch_user":
+        raise HTTPException(
+            status_code=403,
+            detail="Branch personnel passwords are managed by your facility admin",
+        )
     
     # Update password
     hashed_password = get_password_hash(new_password)
@@ -227,9 +254,17 @@ async def reset_password(
 # Protected User Routes
 # ============================================
 
-@router.get("/me", response_model=UserResponse)
-async def get_current_user_profile(current_user: UserResponse = Depends(get_current_user)):
-    """Get current user profile."""
+@router.get("/me")
+async def get_current_user_profile(
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    """Get current user profile with organization context."""
+    from utils.facility_auth import build_auth_payload
+
+    user_row = db.query(UserModel).filter(UserModel.id == current_user.id).one_or_none()
+    if user_row:
+        return build_auth_payload(db, user_row)
     return current_user
 
 @router.put("/me", response_model=UserResponse)
@@ -239,6 +274,11 @@ async def update_current_user_profile(
     db: Session = Depends(get_db),
 ):
     """Update current user profile."""
+    if current_user.role == "branch_user":
+        raise HTTPException(
+            status_code=403,
+            detail="Your profile is managed by your facility admin",
+        )
     update_data = user_update.dict(exclude_unset=True)
     if "password" in update_data:
         update_data["hashed_password"] = get_password_hash(update_data.pop("password"))

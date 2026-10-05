@@ -1,87 +1,573 @@
-@import '@fontsource/space-grotesk/400.css';
-@import '@fontsource/space-grotesk/500.css';
-@import '@fontsource/space-grotesk/600.css';
-@import '@fontsource/space-grotesk/700.css';
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 body {
-    margin: 0;
-    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto",
-        "Oxygen", "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans",
-        "Helvetica Neue", sans-serif;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-code {
-    font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-        monospace;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #F9F8F6;
+  color: #1A1A1A;
 }
 
 @layer base {
   :root {
-        --background: 0 0% 100%;
-        --foreground: 0 0% 3.9%;
-        --card: 0 0% 100%;
-        --card-foreground: 0 0% 3.9%;
-        --popover: 0 0% 100%;
-        --popover-foreground: 0 0% 3.9%;
-        --primary: 0 0% 9%;
-        --primary-foreground: 0 0% 98%;
-        --secondary: 0 0% 96.1%;
-        --secondary-foreground: 0 0% 9%;
-        --muted: 0 0% 96.1%;
-        --muted-foreground: 0 0% 45.1%;
-        --accent: 0 0% 96.1%;
-        --accent-foreground: 0 0% 9%;
-        --destructive: 0 84.2% 60.2%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 89.8%;
-        --input: 0 0% 89.8%;
-        --ring: 0 0% 3.9%;
-        --chart-1: 12 76% 61%;
-        --chart-2: 173 58% 39%;
-        --chart-3: 197 37% 24%;
-        --chart-4: 43 74% 66%;
-        --chart-5: 27 87% 67%;
-        --radius: 0.5rem;
-    }
-  .dark {
-        --background: 0 0% 3.9%;
-        --foreground: 0 0% 98%;
-        --card: 0 0% 3.9%;
-        --card-foreground: 0 0% 98%;
-        --popover: 0 0% 3.9%;
-        --popover-foreground: 0 0% 98%;
-        --primary: 0 0% 98%;
-        --primary-foreground: 0 0% 9%;
-        --secondary: 0 0% 14.9%;
-        --secondary-foreground: 0 0% 98%;
-        --muted: 0 0% 14.9%;
-        --muted-foreground: 0 0% 63.9%;
-        --accent: 0 0% 14.9%;
-        --accent-foreground: 0 0% 98%;
-        --destructive: 0 62.8% 30.6%;
-        --destructive-foreground: 0 0% 98%;
-        --border: 0 0% 14.9%;
-        --input: 0 0% 14.9%;
-        --ring: 0 0% 83.1%;
-        --chart-1: 220 70% 50%;
-        --chart-2: 160 60% 45%;
-        --chart-3: 30 80% 55%;
-        --chart-4: 280 65% 60%;
-        --chart-5: 340 75% 55%;
-    }
+    --background: 40 20% 97%;
+    --foreground: 0 0% 10%;
+    --card: 40 20% 97%;
+    --card-foreground: 0 0% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --primary: 0 0% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 40 10% 94%;
+    --secondary-foreground: 0 0% 10%;
+    --muted: 40 10% 94%;
+    --muted-foreground: 0 0% 42%;
+    --accent: 20 50% 53%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 40 10% 88%;
+    --input: 40 10% 88%;
+    --ring: 20 50% 53%;
+    --radius: 0.75rem;
+  }
 }
 
-@layer base {
-  * {
-    @apply border-border;
-    }
-  body {
-    @apply bg-background text-foreground;
-    }
+@layer components {
+  .editorial-headline {
+    @apply text-3xl sm:text-4xl lg:text-[2.75rem] font-bold leading-[1.08] tracking-tight text-ink uppercase;
+  }
+  .app-page-title {
+    @apply text-base font-semibold leading-tight tracking-tight text-ink uppercase;
+  }
+  .editorial-label {
+    @apply text-[11px] font-medium uppercase tracking-[0.2em] text-ink-faint;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center bg-ink text-white text-sm font-medium px-6 py-3 hover:bg-ink/90 transition-colors;
+    border-radius: 25px;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center border border-ink/20 text-ink text-sm font-medium px-6 py-3 hover:bg-ink/5 transition-colors;
+    border-radius: 25px;
+  }
+  .btn-store {
+    @apply inline-flex items-center justify-center bg-copper text-white text-sm font-medium px-6 py-3 hover:bg-copper-dark transition-colors gap-2;
+    border-radius: 25px;
+  }
+  .btn-store-outline {
+    @apply inline-flex items-center justify-center border border-ink/15 bg-white text-ink text-sm font-medium px-6 py-3 hover:bg-ink/5 transition-colors gap-2;
+    border-radius: 25px;
+  }
+  .section-divider {
+    @apply border-t border-ink/10;
+  }
+  .editorial-panel {
+    @apply bg-white/80 border border-ink/10 rounded-2xl p-6 sm:p-8;
+  }
+  .editorial-accent-border {
+    @apply border-l-2 border-copper pl-5 sm:pl-6;
+  }
+  .editorial-serif {
+    @apply font-serif text-ink leading-snug;
+  }
+  .editorial-tab-active {
+    @apply text-copper relative after:absolute after:-bottom-2 after:left-0 after:right-0 after:h-px after:bg-copper;
+  }
+}
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]):not([type="image"]):not(.filter-field):not(.store-search):not(.date-range-input),
+textarea,
+select {
+  border-radius: 4px !important;
+}
+
+input.filter-field {
+  border-radius: 25px !important;
+}
+
+input.store-search {
+  border-radius: 999px !important;
+}
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 3.25rem !important;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1.25rem center;
+  background-size: 14px 14px;
+}
+
+button:not(.filter-reset):not(.store-search-btn):not(.rte-btn):not(.gallery-nav):not(.gallery-thumb):not(.ui-tab):not(.ui-tab-sheet):not(.ui-nav-chip):not(.date-preset):not(.date-range-action):not(.date-nav):not(.date-day):not(.report-sort):not(.form-field):not(.form-menu-item):not([role="combobox"]):not([role="tab"]):not([role="switch"]):not([role="checkbox"]):not([role="radio"]):not([role="option"]):not([role="menuitem"]):not([role="menuitemcheckbox"]):not([role="menuitemradio"]),
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  border-radius: 25px !important;
+}
+
+button.store-search-btn {
+  border-radius: 999px !important;
+}
+
+button.form-field {
+  border-radius: 4px !important;
+}
+
+button.form-menu-item,
+.form-select-menu,
+[role="menuitem"],
+[role="menuitemcheckbox"],
+[role="menuitemradio"] {
+  border-radius: 0 !important;
+}
+
+button.filter-reset {
+  border-radius: 25px !important;
+}
+
+button.report-sort {
+  border-radius: 0 !important;
+}
+
+button.ui-tab {
+  border-radius: 0 !important;
+}
+
+button.ui-tab-sheet {
+  border-radius: 10px 10px 0 0 !important;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-bottom: 1.5rem;
+}
+.filter-bar > * {
+  flex-shrink: 0;
+}
+.filter-bar > input:not([type="date"]),
+.filter-bar > .filter-search,
+.filter-bar > .relative {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+  max-width: none;
+}
+.filter-bar > select,
+.filter-bar > .filter-multi,
+.filter-bar > .filter-date {
+  flex: 0 0 12rem;
+  width: 12rem;
+  min-width: 12rem;
+  max-width: 12rem;
+}
+.filter-bar > .filter-date {
+  flex-basis: 13.5rem;
+  width: 13.5rem;
+  min-width: 13.5rem;
+  max-width: 16rem;
+}
+.date-range-panel .date-month:not(:first-child) .date-nav-prev,
+.date-range-panel .date-month:not(:last-child) .date-nav-next {
+  visibility: hidden;
+  pointer-events: none;
+}
+.date-range-panel .date-day:not(.day-range-middle) {
+  border-radius: 999px !important;
+}
+.date-range-panel .day-range-middle {
+  border-radius: 0 !important;
+}
+.date-range-panel .date-preset,
+.date-range-panel .date-range-action,
+.date-range-panel .date-nav {
+  border-radius: 8px !important;
+}
+input.date-range-input {
+  border-radius: 8px !important;
+}
+.filter-bar > select {
+  padding-right: 2.25rem !important;
+  background-position: right 0.6rem center;
+}
+.filter-bar > input[type="date"] {
+  flex: 0 0 9.75rem;
+  width: 9.75rem;
+  min-width: 9.75rem;
+  max-width: 9.75rem;
+  padding-right: 0.5rem !important;
+}
+.filter-bar > .filter-reset {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+/* Dashboard-only: public catalog filter bars stay a single scrolling row. */
+@media (max-width: 767px) {
+  .dashboard-shell .filter-bar {
+    flex-wrap: wrap;
+    overflow: visible;
+    align-items: stretch;
+    max-width: 100%;
+  }
+  .dashboard-shell .filter-bar > * {
+    flex-shrink: 1;
+  }
+  .dashboard-shell .filter-bar > .filter-reset {
+    margin-left: 0;
+  }
+}
+
+@media (max-width: 639px) {
+  .dashboard-shell .filter-bar > input:not([type="date"]),
+  .dashboard-shell .filter-bar > .filter-search,
+  .dashboard-shell .filter-bar > .relative,
+  .dashboard-shell .filter-bar > select,
+  .dashboard-shell .filter-bar > .filter-multi,
+  .dashboard-shell .filter-bar > .filter-date,
+  .dashboard-shell .filter-bar > input[type="date"],
+  .dashboard-shell .filter-bar > .filter-reset {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 767px) {
+  .dashboard-shell .filter-bar > input:not([type="date"]),
+  .dashboard-shell .filter-bar > .filter-search,
+  .dashboard-shell .filter-bar > .relative,
+  .dashboard-shell .filter-bar > select,
+  .dashboard-shell .filter-bar > .filter-multi,
+  .dashboard-shell .filter-bar > .filter-date,
+  .dashboard-shell .filter-bar > input[type="date"],
+  .dashboard-shell .filter-bar > .filter-reset {
+    flex: 1 1 calc(50% - 0.5rem);
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+}
+
+html:has(.dashboard-shell),
+body:has(.dashboard-shell) {
+  overflow-x: clip;
+  overflow-y: auto;
+  max-width: 100%;
+}
+
+.dashboard-frame {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.table-scroll {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  contain: inline-size paint;
+  overscroll-behavior-x: contain;
+}
+
+.table-scroll table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-scroll thead th:first-child,
+.table-scroll tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background-color: #fff;
+  box-shadow: inset -1px 0 0 rgba(26, 26, 26, 0.08);
+}
+
+.table-scroll thead th:first-child {
+  z-index: 2;
+  background-color: #f9f8f6;
+}
+
+.table-scroll tbody tr:hover td:first-child {
+  background-color: #f6f6f5;
+}
+
+button.rte-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  color: #1a1a1a;
+  border-radius: 4px !important;
+  background: transparent;
+}
+
+button.rte-btn:hover {
+  background: #eceae6;
+  color: #c4704a;
+}
+
+button.gallery-nav {
+  border-radius: 999px !important;
+}
+
+button.gallery-thumb {
+  border-radius: 8px !important;
+  transition: border-color 280ms ease, box-shadow 280ms ease;
+}
+
+.gallery-slide {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transform: scale(1.025);
+  transition: opacity 480ms cubic-bezier(0.22, 1, 0.36, 1), transform 480ms cubic-bezier(0.22, 1, 0.36, 1);
+  z-index: 0;
+}
+
+.gallery-slide.is-active {
+  opacity: 1;
+  transform: scale(1);
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gallery-slide,
+  button.gallery-thumb {
+    transition: none;
+    transform: none;
+  }
+}
+
+.rich-text-surface.is-empty:before {
+  content: attr(data-placeholder);
+  color: #9a9590;
+  pointer-events: none;
+  float: left;
+}
+
+.product-prose p {
+  margin: 0 0 0.75rem;
+}
+
+.product-prose p:last-child,
+.product-prose ul:last-child,
+.product-prose ol:last-child,
+.product-prose h3:last-child,
+.product-prose h2:last-child {
+  margin-bottom: 0;
+}
+
+.product-prose h2,
+.product-prose h3,
+.product-prose h4 {
+  color: #1a1a1a;
+  font-weight: 600;
+  margin: 0 0 0.5rem;
+}
+
+.product-prose h2 { font-size: 1.125rem; }
+.product-prose h3 { font-size: 1rem; }
+.product-prose h4 { font-size: 0.9375rem; }
+
+.product-prose ul,
+.product-prose ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.product-prose ul { list-style: disc; }
+.product-prose ol { list-style: decimal; }
+
+.product-prose li { margin: 0.15rem 0; }
+
+.product-prose a {
+  color: #c4704a;
+  text-decoration: underline;
+}
+
+.product-prose strong,
+.product-prose b { font-weight: 600; }
+
+.product-prose em,
+.product-prose i { font-style: italic; }
+
+.product-prose u { text-decoration: underline; }
+
+.product-prose blockquote {
+  margin: 0 0 0.75rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid #c4704a;
+  color: #6b6560;
+}
+
+/* Order management marketing page */
+.om-hero-wash {
+  background:
+    radial-gradient(ellipse 80% 55% at 85% 20%, rgba(196, 112, 74, 0.12), transparent 55%),
+    radial-gradient(ellipse 60% 50% at 10% 80%, rgba(0, 99, 50, 0.06), transparent 50%),
+    linear-gradient(180deg, #f0eeeb 0%, #f9f8f6 55%, #f9f8f6 100%);
+}
+
+.om-cta-wash {
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 0%, rgba(196, 112, 74, 0.14), transparent 60%),
+    linear-gradient(180deg, #f9f8f6 0%, #f0eeeb 100%);
+}
+
+.om-scarce-glow {
+  background:
+    radial-gradient(ellipse 45% 40% at 92% 12%, rgba(196, 112, 74, 0.09), transparent 55%),
+    radial-gradient(ellipse 35% 45% at 4% 88%, rgba(0, 99, 50, 0.05), transparent 50%);
+  pointer-events: none;
+}
+
+.om-scarce-wash {
+  background:
+    radial-gradient(ellipse 50% 55% at 8% 30%, rgba(196, 112, 74, 0.07), transparent 60%),
+    linear-gradient(180deg, #f9f8f6 0%, #f4f2ef 100%);
+  pointer-events: none;
+}
+
+.om-scarce-dots {
+  background-image: radial-gradient(rgba(26, 26, 26, 0.045) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: linear-gradient(180deg, transparent, #000 18%, #000 82%, transparent);
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+/* Screenshots are ~1620px wide. On 2x displays the sharp CSS width is ~810px
+   (natural ÷ devicePixelRatio). Cap there and avoid wrapper overflow/transform
+   so Chrome does not re-rasterize the bitmap soft. */
+.om-shot {
+  display: block;
+  width: 100%;
+  max-width: 51rem;
+  height: auto;
+  margin: 0;
+  border-radius: 0.85rem;
+  border: 1px solid rgba(26, 26, 26, 0.1);
+  background: #fff;
+  box-shadow:
+    0 28px 56px -20px rgba(26, 26, 26, 0.32),
+    0 12px 24px -16px rgba(26, 26, 26, 0.18);
+  image-rendering: auto;
+}
+
+.om-shot-hero {
+  max-width: min(100%, 51rem);
+}
+
+.om-carousel {
+  display: grid;
+  gap: 3rem;
+  align-items: start;
+}
+
+@media (min-width: 1024px) {
+  .om-carousel {
+    grid-template-columns: minmax(16rem, 22rem) minmax(0, 51rem);
+    gap: 4rem;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.om-carousel-copy {
+  min-height: 12rem;
+  padding-right: 0.5rem;
+}
+
+.om-carousel-stage {
+  position: relative;
+}
+
+.om-carousel-slide {
+  display: none;
+  width: 100%;
+}
+
+.om-carousel-slide.is-active {
+  display: block;
+}
+
+.om-carousel-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 999px;
+  border: 1px solid rgba(26, 26, 26, 0.15);
+  background: #fff;
+  color: #1a1a1a;
+  transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+}
+
+.om-carousel-nav:hover {
+  border-color: #c4704a;
+  color: #c4704a;
+}
+
+.om-carousel-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 999px;
+  background: rgba(26, 26, 26, 0.2);
+  transition: width 0.3s ease, background 0.3s ease;
+}
+
+.om-carousel-dot.is-active {
+  width: 1.35rem;
+  background: #c4704a;
+}
+
+.om-fade-key {
+  animation: om-rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes om-rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.om-reveal {
+  animation: om-rise 0.85s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.om-reveal-delay {
+  animation-delay: 0.18s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .om-reveal,
+  .om-reveal-delay,
+  .om-fade-key {
+    animation: none !important;
+  }
 }

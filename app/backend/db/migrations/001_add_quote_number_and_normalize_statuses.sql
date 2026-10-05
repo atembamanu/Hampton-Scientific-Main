@@ -31,13 +31,15 @@ SET quote_number = y.new_quote_number
 FROM year_prefix y
 WHERE q.id = y.id;
 
--- 3) Normalize legacy quote statuses to only: quoted, invoiced
-UPDATE quotes
-SET status = 'quoted'
-WHERE status IN ('pending', 'approved');
-
--- Optional: if you ever stored other legacy statuses, also map them.
--- UPDATE quotes SET status = 'quoted' WHERE status NOT IN ('quoted','invoiced');
+-- 3) (RETIRED) Legacy status normalization.
+-- This file is re-applied on every backend startup (see db/init_db.py). The
+-- original statement below rewrote every 'pending' quote to 'quoted', which in
+-- the current ops workflow silently promoted newly submitted / under-review
+-- quotes to "preparing quote" after each restart and zeroed the
+-- "New quote requests" dashboard tile. 'pending' is now a first-class status,
+-- so the normalization must not run again.
+--
+-- UPDATE quotes SET status = 'quoted' WHERE status IN ('pending', 'approved');
 
 COMMIT;
 

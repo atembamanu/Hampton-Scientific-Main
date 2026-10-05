@@ -1,0 +1,74 @@
+{
+  "description": "Mapping from Microbiology E.A LTD catalog JSON to Hampton Scientific backend models",
+  "target_models": {
+    "ProductCategory": "app/backend/db/models.py — ProductCategory ORM",
+    "Product": "app/backend/db/models.py — Product ORM",
+    "pydantic": "app/backend/models/product.py"
+  },
+  "category_mapping": {
+    "source_file": "categories.json",
+    "fields": {
+      "category_id": "ProductCategory.category_id (string slug, unique)",
+      "name": "ProductCategory.name",
+      "description": "ProductCategory.description",
+      "display_order": "ProductCategory.display_order",
+      "image": "ProductCategory.image — download from source or null",
+      "parent_id": "Not in current ORM — flatten to top-level categories only, or encode parent in description"
+    },
+    "import_strategy": "Import 8 top-level categories first; optionally merge subcategories into product.category_name string"
+  },
+  "product_mapping": {
+    "source_file": "products.json",
+    "fields": {
+      "slug": "Product.product_id (use slug as stable external ID)",
+      "name": "Product.name",
+      "price": "Product.price — default 0 until admin sets (source has no public price)",
+      "category_id": "Product.category_id — must match imported ProductCategory.category_id",
+      "category_name": "Product.category_name — denormalized display name",
+      "in_stock": "Product.in_stock",
+      "image_url": "Product.image_url — re-host locally under /images/products/",
+      "description": "Product.description",
+      "package": "Product.package — empty unless parsed from detail page",
+      "stocking_unit": "Product.stocking_unit — default 'Unit'",
+      "unit": "Product.unit — legacy, default 'Unit'"
+    }
+  },
+  "example_hampton_category": {
+    "category_id": "haematology",
+    "name": "Haematology",
+    "description": "Haematology analyzers, reagents, controls, and haemoglobin meters.",
+    "image": null,
+    "display_order": 1
+  },
+  "example_hampton_product": {
+    "product_id": "cellscan-30-analyzer",
+    "name": "CellScan 30 Analyzer",
+    "price": 0,
+    "package": "",
+    "stocking_unit": "Unit",
+    "unit": "Unit",
+    "category_id": "haematology",
+    "category_name": "Haematology",
+    "in_stock": true,
+    "image_url": "/images/products/cellscan-30-analyzer.jpg",
+    "description": "Robust 3-part 2-reagent haematology analyzer for cost-minded, quality-focused clinical laboratories."
+  },
+  "example_quote_cart_item": {
+    "note": "When customer selects product for quote",
+    "productId": "cellscan-30-analyzer",
+    "categoryId": "haematology",
+    "name": "CellScan 30 Analyzer",
+    "category": "Haematology",
+    "price": 0,
+    "quantity": 1,
+    "notes": ""
+  },
+  "import_checklist": [
+    "Create categories from categories.json (top-level only or full tree)",
+    "Create products from products.json",
+    "Download and store product images locally",
+    "Set prices in admin dashboard",
+    "Verify product slugs match quote cart productId lookups",
+    "Scrape remaining categories: rapid-test-strips, blood-sugar-testing, specimen-collections, general-laboratory-equipments"
+  ]
+}

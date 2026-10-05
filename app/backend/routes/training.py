@@ -11,6 +11,7 @@ from models.training import (
 )
 from models.user import UserResponse
 from utils.auth import get_current_user, get_admin_user
+from utils.permissions import require_company_permission
 from utils.email_service import send_training_registration_email
 from utils.logger import logger
 from deps import get_db
@@ -113,7 +114,7 @@ async def get_user_registrations(
 
 @router.get("/admin/registrations", response_model=List[dict])
 async def get_all_training_registrations(
-    current_user: UserResponse = Depends(get_admin_user),
+    current_user: UserResponse = Depends(require_company_permission("training")),
     limit: int = 50,
     skip: int = 0,
     db: Session = Depends(get_db),
@@ -147,7 +148,7 @@ async def get_all_training_registrations(
 @router.post("/admin/programs", response_model=TrainingProgram)
 async def create_training_program(
     program_data: dict,
-    current_user: UserResponse = Depends(get_admin_user),
+    current_user: UserResponse = Depends(require_company_permission("training")),
     db: Session = Depends(get_db),
 ):
     """Create a new training program (admin only)."""
@@ -172,7 +173,7 @@ async def create_training_program(
 async def update_training_program(
     program_id: str,
     program_data: dict,
-    current_user: UserResponse = Depends(get_admin_user),
+    current_user: UserResponse = Depends(require_company_permission("training")),
     db: Session = Depends(get_db),
 ):
     """Update a training program (admin only)."""
@@ -200,7 +201,7 @@ async def update_training_program(
 @router.delete("/admin/programs/{program_id}")
 async def delete_training_program(
     program_id: str,
-    current_user: UserResponse = Depends(get_admin_user),
+    current_user: UserResponse = Depends(require_company_permission("training")),
     db: Session = Depends(get_db),
 ):
     """Delete a training program (admin only)."""

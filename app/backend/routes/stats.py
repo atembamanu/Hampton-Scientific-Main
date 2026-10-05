@@ -1,12 +1,16 @@
 from fastapi import APIRouter, Depends
 from datetime import datetime, timedelta
+from typing import Optional
 
 from sqlalchemy.orm import Session
 
 from models.user import UserResponse
 from utils.auth import get_admin_user
+from utils.permissions import require_company_permission
 from utils.logger import logger
 from deps import get_db
+from utils.company_reports import build_company_report
+from utils.ops_stats import OPEN_INVOICE_STATUSES
 from db.models import (
     User as UserModel,
     Quote,
@@ -22,7 +26,7 @@ router = APIRouter()
 
 @router.get("/stats")
 async def get_admin_stats(
-    current_user: UserResponse = Depends(get_admin_user),
+    current_user: UserResponse = Depends(require_company_permission("reports")),
     db: Session = Depends(get_db),
 ):
     """Get dashboard statistics - Admin only"""
@@ -55,8 +59,8 @@ async def get_admin_stats(
         .count()
     )
 
-    # Invoice status (pending/paid)
-    unpaid_invoices = db.query(Invoice).filter(Invoice.status == "pending").count()
+    # Invoice status (awaiting_payment/paid; legacy rows may still read pending/unpaid)
+    unpaid_invoices = db.query(Invoice).filter(Invoice.status.in_(list(OPEN_INVOICE_STATUSES))).count()
     paid_invoices = (
         db.query(Invoice).filter(Invoice.status == "paid").count()
     )
@@ -106,3 +110,13 @@ async def get_admin_stats(
         "newsletter": {"subscribers": total_subscribers},
         "revenue": {"estimated_total": total_revenue},
     }
+
+
+@router.get("/reports")
+async def get_company_reports(
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    current_user: UserResponse = Depends(require_company_permission("reports")),
+    db: Session = Depends(get_db),
+):
+    return build_company_report(db, from_date=from_date, to_date=to_date)

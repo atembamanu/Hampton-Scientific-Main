@@ -6,13 +6,15 @@ services:
     environment:
       - PYTHONPATH=/app
       - PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:3001}
+      - APP_TIMEZONE=${APP_TIMEZONE:-Africa/Nairobi}
     depends_on:
       postgres:
         condition: service_started
     ports:
       - "8001:8001"
     volumes:
-      # Mount the frontend public folder so the PDF generator can find the logo
+      # PDF generator reads logo + paid stamp from the public site assets
       - ./app/frontend/public:/app/assets:ro
       # Persist uploaded product images across container rebuilds
       - ./app/backend/routes/uploads:/app/routes/uploads
@@ -40,7 +42,8 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "127.0.0.1:5432:5432"
+      # Host 5433 avoids Windows reserved/occupied 5432; containers still use postgres:5432
+      - "127.0.0.1:5433:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     networks:

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <style>
+        :root {
+            --primary-color: #628C84;
+            /* Sage Green from your sample */
+            --text-main: #333333;
+            --text-light: #666666;
+            --border-color: #e0e0e0;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            margin: 0;
+            padding: 40px;
+            color: var(--text-main);
+            line-height: 1.4;
+        }
+
+        /* Header Layout */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 60px;
+        }
+
+        .company-info h1 {
+            margin: 0;
+            font-size: 18px;
+            color: var(--text-main);
+        }
+
+        .company-info p {
+            margin: 2px 0;
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .doc-type {
+            font-size: 36px;
+            font-weight: bold;
+            color: var(--primary-color);
+            letter-spacing: 4px;
+            margin: 0;
+            text-align: right;
+            line-height: 1.1;
+        }
+
+        /* Info Grid */
+        .info-grid {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+
+        .address-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+
+        .section-title {
+            color: var(--primary-color);
+            font-weight: bold;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+
+        .meta-table td {
+            font-size: 11px;
+            padding: 4px 0;
+        }
+
+        .meta-label {
+            color: var(--primary-color);
+            font-weight: bold;
+            padding-right: 20px !important;
+            text-align: right;
+        }
+
+        /* Items Table */
+        table.items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        .items-table th {
+            background-color: var(--primary-color);
+            color: white;
+            text-align: left;
+            padding: 12px;
+            font-size: 12px;
+        }
+
+        .items-table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border-color);
+            font-size: 12px;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        /* Footer & Signature */
+        .footer {
+            margin-top: 100px;
+        }
+
+        .company-address {
+            padding-top: 20px;
+        }
+
+        .customer-details {
+            margin: 2px 0;
+            font-size: 12px;
+            color: var(--text-light);
+        }
+
+        .line-item {
+            font-size: 11px;
+            color: var(--text-light);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <div class="company-info">
+            <img src="{{ logo_data }}" alt="Hampton Scientific Limited" style="width: 220px; height: auto; max-height: 48px; object-fit: contain;">
+            <div class="company-address">
+                <p>{{ company.address_line1 }}</p>
+                <p>{{ company.address_line2 }}</p>
+                <p>{{ company.phone or '' }}</p>
+                <p>{{ company.email or '' }}</p>
+                <p>{{ company.website or '' }}</p>
+            </div>
+        </div>
+        <h2 class="doc-type">DELIVERY<br>NOTE</h2>
+    </div>
+
+    <div class="info-grid">
+        <div class="bill-to">
+            <div class="section-title">Shipping Address</div>
+            <div style="font-weight: bold; font-size: 14px;">{{ shipping.company or shipping.name }}</div>
+            {% if shipping.branch %}
+            <p class="customer-details">{{ shipping.branch }}</p>
+            {% endif %}
+            {% if shipping.name and shipping.company %}
+            <p class="customer-details">{{ shipping.name }}</p>
+            {% endif %}
+            <p class="customer-details">{{ shipping.address }}</p>
+            <p class="customer-details">{{ shipping.phone }}</p>
+        </div>
+        <table class="meta-table">
+            <tr>
+                <td class="meta-label">Delivery Note #</td>
+                <td>{{ delivery_note_number }}</td>
+            </tr>
+            <tr>
+                <td class="meta-label">Order #</td>
+                <td>{{ order_number }}</td>
+            </tr>
+            <tr>
+                <td class="meta-label">Order Date</td>
+                <td>{{ order_date }}</td>
+            </tr>
+            <tr>
+                <td class="meta-label">Despatch Date</td>
+                <td>{{ despatch_date }}</td>
+            </tr>
+            <tr>
+                <td class="meta-label">Delivery Method</td>
+                <td>{{ delivery_method }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="address-row">
+        <div>
+            <div class="section-title">Invoice Address</div>
+            <div style="font-weight: bold; font-size: 14px;">{{ invoice_address.company or invoice_address.name }}</div>
+            {% if invoice_address.name and invoice_address.company %}
+            <p class="customer-details">{{ invoice_address.name }}</p>
+            {% endif %}
+            <p class="customer-details">{{ invoice_address.address }}</p>
+            <p class="customer-details">{{ invoice_address.phone }}</p>
+        </div>
+        <div></div>
+        <div></div>
+    </div>
+
+    <table class="items-table">
+        <thead>
+            <tr>
+                <th style="width: 15%;">Item #</th>
+                <th style="width: 49%;">Description</th>
+                <th style="width: 12%;" class="text-right">Ordered</th>
+                <th style="width: 12%;" class="text-right">Delivered</th>
+                <th style="width: 12%;" class="text-right">Outstanding</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.item_number }}</td>
+                <td>{{ item.description }}</td>
+                <td class="text-right">{{ "%.2f"|format(item.ordered) }}</td>
+                <td class="text-right">{{ "%.2f"|format(item.delivered) }}</td>
+                <td class="text-right">{{ "%.2f"|format(item.outstanding) }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <div class="section-title">Terms and Conditions</div>
+        <p class="line-item">Please notify us within 2 days if goods have not been received. Shortages or damages must be reported within 24 hours of delivery.</p>
+        <p class="line-item">All complaints regarding this delivery must be made in writing within 30 days. Returns require prior authorization and may be subject to inspection.</p>
+        <p class="line-item">This delivery note confirms despatch of the items listed above against the referenced order. It is not a tax invoice.</p>
+        <p class="line-item" style="margin-top: 16px;">
+            Should you have any enquiries concerning this delivery note, please contact
+            {{ enquiry_contact_name }}{% if enquiry_phone %} on {{ enquiry_phone }}{% endif %}{% if enquiry_email %} at {{ enquiry_email }}{% endif %}.
+        </p>
+    </div>
+
+</body>
+
+</html>

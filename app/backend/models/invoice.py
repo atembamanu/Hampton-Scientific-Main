@@ -2,6 +2,8 @@ from pydantic import BaseModel, Field
 from typing import List, Optional, Dict
 from datetime import datetime
 
+from models.base import AppModel
+
 class InvoiceItem(BaseModel):
     """Model for individual invoice items."""
     product_id: str
@@ -20,7 +22,7 @@ class InvoiceCreate(BaseModel):
     payment_terms: Optional[int] = 30
     notes: Optional[str] = None
 
-class Invoice(BaseModel):
+class Invoice(AppModel):
     """Model for invoice responses."""
     id: Optional[str] = None
     invoice_id: str
@@ -40,7 +42,7 @@ class Invoice(BaseModel):
     total: float
     payment_terms: int
     due_date: datetime
-    status: str = "pending"
+    status: str = "awaiting_payment"  # awaiting_payment | paid ("overdue" is derived from due_date)
     notes: Optional[str] = None
     created_by: str
     created_at: datetime
@@ -53,6 +55,3 @@ class Invoice(BaseModel):
 
     class Config:
         from_attributes = True
-        json_encoders = {
-            datetime: lambda v: v.isoformat()
-        }

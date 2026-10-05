@@ -1,19 +1,42 @@
 import os
 import asyncio
 import logging
-import resend
 import base64
+import smtplib
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import formataddr, parseaddr
 from typing import List, Optional
 from pathlib import Path
 
 from env_loader import load_app_env
-from .constants import COMPANY_LOGO
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from db.session import SessionLocal
 from db.models import SiteSettings
-from utils.document_context import build_invoice_context, build_quote_context
 from utils.pdf import generate_invoice_pdf, generate_quote_pdf
+from utils.email_layout import (
+    e,
+    email_cta,
+    email_detail_card,
+    email_greeting,
+    email_highlight,
+    email_info_grid,
+    email_item_rows,
+    email_items_table,
+    email_panel,
+    email_section_title,
+    email_status_row,
+    email_totals_block,
+    first_name_only,
+    mailto,
+    render_email,
+    GREEN,
+    BORDER,
+    INK,
+    MUTED,
+)
 
 
 load_app_env()
@@ -23,6 +46,9 @@ frontend_url = os.environ['FRONTEND_URL']
 
 # Module-level company info cache (set from server.py)
 _company_info = {}
+
+DEFAULT_COMPANY_EMAIL = "info@hamptonscientific.com"
+DEFAULT_SENDER = f"Hampton Scientific <{DEFAULT_COMPANY_EMAIL}>"
 
 def set_company_info(info: dict):
     """Called from server.py to update company info cache"""
@@ -62,27 +88,16 @@ def _get_company_info_from_db() -> dict:
 
 
 def _company_signature_html(company_info: dict) -> str:
-    name = company_info.get("company_name") or "Hampton Scientific Limited"
-    phone = company_info.get("phone") or ""
-    website = (company_info.get("website") or "").strip()
-    address = (company_info.get("address") or "").strip()
-    location = address or "Nairobi, Kenya"
-    web_line = f"Web: {website}" if website else "Web: www.hamptonscientific.com"
-    phone_line = f"Phone: {phone}" if phone else "Phone: 0742 687 661"
-    return (
-        f"<p style=\"margin:0;\"><strong>{name}</strong><br>"
-        f"{location}<br>"
-        f"{phone_line}<br>"
-        f"{web_line}</p>"
-    )
+    name = e(company_info.get("company_name") or "Hampton Scientific Limited")
+    return f'<p style="margin:24px 0 0 0; color:{INK};">Best regards,<br><strong>{name} Team</strong></p>'
 
 
-def _wrap_plain_email(body_html: str) -> str:
-    # Keep it extremely compatible across clients (Gmail, mobile).
-    return (
-        "<div style=\"font-family: Arial, sans-serif; font-size: 14px; color:#111;\">"
-        f"{body_html}"
-        "</div>"
+def _wrap_document_email(title: str, body_html: str, *, eyebrow: str = "Document", company_info: dict = None) -> str:
+    return render_email(
+        title,
+        body_html,
+        eyebrow=eyebrow,
+        company_info=company_info or _get_company_info_from_db(),
     )
 
 
@@ -123,43 +138,131 @@ async def _send_document_email(
     attachments = [{"filename": pdf_filename, "content": pdf_base64}]
     return await send_email_async([to_email], subject, html, attachments=attachments)
 
-# Resend configuration
-RESEND_API_KEY = os.environ["RESEND_API_KEY"] if "RESEND_API_KEY" in os.environ else ""
-SENDER_EMAIL = os.environ["SENDER_EMAIL"] if "SENDER_EMAIL" in os.environ else "onboarding@resend.dev"
-ADMIN_EMAIL = os.environ["ADMIN_EMAIL"] if "ADMIN_EMAIL" in os.environ else "info@hamptonscientific.com"
+# Outbound mail via Zoho (or any) SMTP.
+SENDER_EMAIL = (os.environ.get("SENDER_EMAIL") or DEFAULT_SENDER).strip()
+ADMIN_EMAIL = (os.environ.get("ADMIN_EMAIL") or DEFAULT_COMPANY_EMAIL).strip()
 
-# Initialize Resend
-if RESEND_API_KEY:
-    resend.api_key = RESEND_API_KEY
-    logger.info("Resend API initialized")
+def _env_secret(name: str) -> str:
+    """Read env value and strip whitespace / wrapping quotes from .env editors."""
+    value = (os.environ.get(name) or "").strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        value = value[1:-1].strip()
+    return value
+
+
+SMTP_HOST = _env_secret("SMTP_HOST")
+SMTP_PORT = int(_env_secret("SMTP_PORT") or "465")
+SMTP_USER = _env_secret("SMTP_USER")
+# Zoho MFA: use an application-specific password (SMTP_APP_PASSWORD or SMTP_PASSWORD).
+SMTP_PASSWORD = _env_secret("SMTP_APP_PASSWORD") or _env_secret("SMTP_PASSWORD")
+SMTP_USE_SSL = (_env_secret("SMTP_USE_SSL") or "true").lower() in ("1", "true", "yes")
+
+if SMTP_HOST and SMTP_USER and SMTP_PASSWORD:
+    logger.info("SMTP email delivery configured (%s:%s)", SMTP_HOST, SMTP_PORT)
 else:
-    logger.warning("RESEND_API_KEY not configured - emails will be logged only")
+    logger.warning("SMTP not configured — emails will be logged only")
+
+
+def _smtp_configured() -> bool:
+    return bool(SMTP_HOST and SMTP_USER and SMTP_PASSWORD)
+
+
+def _admin_inbox() -> str:
+    """Inbox for quote/contact/training notifications — Admin Settings email, else env."""
+    try:
+        email = (_get_company_info_from_db().get("email") or "").strip()
+        if email:
+            return email
+    except Exception:
+        logger.debug("Could not load site settings email for admin inbox", exc_info=True)
+    return ADMIN_EMAIL or DEFAULT_COMPANY_EMAIL
+
+
+def _sender_address() -> str:
+    """From header for client-facing mail."""
+    sender = (SENDER_EMAIL or "").strip()
+    if sender:
+        return sender
+    try:
+        ci = _get_company_info_from_db()
+        email = (ci.get("email") or DEFAULT_COMPANY_EMAIL).strip()
+        name = (ci.get("company_name") or "Hampton Scientific").strip()
+        return formataddr((name, email))
+    except Exception:
+        return DEFAULT_SENDER
+
+
+def _from_email_only(sender: str) -> str:
+    _name, addr = parseaddr(sender or "")
+    return (addr or sender or SMTP_USER or DEFAULT_COMPANY_EMAIL).strip()
+
+
+def _send_via_smtp(
+    to_emails: List[str],
+    subject: str,
+    html_content: str,
+    attachments: Optional[List[dict]] = None,
+) -> dict:
+    sender = _sender_address()
+    reply_to = _admin_inbox()
+    msg = MIMEMultipart()
+    msg["From"] = sender
+    msg["To"] = ", ".join(to_emails)
+    msg["Subject"] = subject
+    msg["Reply-To"] = reply_to
+    msg.attach(MIMEText(html_content, "html", "utf-8"))
+
+    for att in attachments or []:
+        filename = att.get("filename") or "attachment.bin"
+        raw = base64.b64decode(att.get("content") or "")
+        # Explicit PDF subtype so clients show a proper attachment icon/open action.
+        subtype = "pdf" if str(filename).lower().endswith(".pdf") else "octet-stream"
+        part = MIMEApplication(raw, _subtype=subtype, Name=filename)
+        part.add_header("Content-Disposition", "attachment", filename=filename)
+        part.add_header("Content-Type", f"application/{subtype}", name=filename)
+        msg.attach(part)
+
+    if SMTP_USE_SSL:
+        server = smtplib.SMTP_SSL(SMTP_HOST, SMTP_PORT, timeout=30)
+    else:
+        server = smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=30)
+        server.ehlo()
+        server.starttls()
+        server.ehlo()
+
+    try:
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        server.sendmail(_from_email_only(sender), to_emails, msg.as_string())
+    finally:
+        try:
+            server.quit()
+        except Exception:
+            pass
+    return {"status": "success"}
+
+
+def _deliver_email(
+    to_emails: List[str],
+    subject: str,
+    html_content: str,
+    attachments: Optional[List[dict]] = None,
+) -> dict:
+    if _smtp_configured():
+        return _send_via_smtp(to_emails, subject, html_content, attachments)
+    logger.info(f"[MOCK EMAIL] To: {to_emails}, Subject: {subject}")
+    return {"status": "mocked", "message": "Email logged (SMTP not configured)"}
 
 
 async def send_email_async(to_emails: List[str], subject: str, html_content: str, attachments: Optional[List[dict]] = None) -> dict:
     """
-    Send email using Resend API (async, non-blocking)
+    Send email (async) via SMTP when configured.
     attachments: List of dicts with 'filename' and 'content' (base64 encoded)
     """
-    if not RESEND_API_KEY:
-        logger.info(f"[MOCK EMAIL] To: {to_emails}, Subject: {subject}")
-        return {"status": "mocked", "message": "Email logged (no API key configured)"}
-    
-    params = {
-        "from": SENDER_EMAIL,
-        "to": to_emails,
-        "subject": subject,
-        "html": html_content
-    }
-    
-    if attachments:
-        params["attachments"] = attachments
-    
     try:
-        # Run sync SDK in thread to keep FastAPI non-blocking
-        result = await asyncio.to_thread(resend.Emails.send, params)
-        logger.info(f"Email sent successfully to {to_emails}")
-        return {"status": "success", "email_id": result.get("id")}
+        result = await asyncio.to_thread(_deliver_email, to_emails, subject, html_content, attachments)
+        if result.get("status") == "success":
+            logger.info(f"Email sent successfully to {to_emails}")
+        return result
     except Exception as e:
         logger.error(f"Failed to send email: {str(e)}")
         return {"status": "error", "error": str(e)}
@@ -169,375 +272,443 @@ def send_email(to_emails: List[str], subject: str, html_content: str, attachment
     """
     Synchronous email sending (for backwards compatibility)
     """
-    if not RESEND_API_KEY:
-        logger.info(f"[MOCK EMAIL] To: {to_emails}, Subject: {subject}")
-        return True
-    
-    params = {
-        "from": SENDER_EMAIL,
-        "to": to_emails,
-        "subject": subject,
-        "html": html_content
-    }
-    
-    if attachments:
-        params["attachments"] = attachments
-    
     try:
-        resend.Emails.send(params)
-        logger.info(f"Email sent successfully to {to_emails}")
-        return True
+        result = _deliver_email(to_emails, subject, html_content, attachments)
+        if result.get("status") == "success":
+            logger.info(f"Email sent successfully to {to_emails}")
+            return True
+        return result.get("status") == "mocked"
     except Exception as e:
         logger.error(f"Failed to send email: {str(e)}")
         return False
 
 
-# Email Templates - accept dynamic company info
+# Legacy shims — prefer render_email for all new templates
 def get_email_header(company_info=None):
-    ci = company_info or _company_info or {}
-    name = ci.get("company_name", "Hampton Scientific Limited")
-    return f"""
-    <div style="background: linear-gradient(135deg, #006332 0%, #00a550 100%); padding: 30px 20px; text-align: center;">
-        <h1 style="color: white; margin: 0; font-size: 28px; font-family: 'Space Grotesk', sans-serif;">{name}</h1>
-        <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 16px;">Medical Supplier &amp; Trainer</p>
-    
-    </div>
-    """
-# <img src="{COMPANY_LOGO}/hampton-logo.svg" alt="{name}" style="height: 50px; margin-bottom: 10px; filter: brightness(0) invert(1);" />
+    return ""
+
 
 def get_email_footer(company_info=None):
-    ci = company_info or _company_info or {}
-    name = ci.get("company_name", "Hampton Scientific Limited")
-    address = ci.get("address", "")
-    po_box = ci.get("po_box", "")
-    phone = ci.get("phone", "")
-    email = ci.get("email", "")
-    addr_line = f"{address}<br>{po_box}" if address and po_box else (address or po_box)
-    contact_parts = []
-    if phone: contact_parts.append(f"Phone: {phone}")
-    if email: contact_parts.append(f"Email: {email}")
-    contact_line = " | ".join(contact_parts)
-    return f"""
-    <div style="background-color: #f8f9fa; padding: 25px 20px; text-align: center; border-top: 1px solid #e9ecef;">
-        <p style="color: #555; font-size: 14px; margin: 0 0 8px 0; font-weight: 600;">{name}</p>
-        {f'<p style="color: #666; font-size: 13px; margin: 0 0 8px 0; line-height: 1.6;">{addr_line}</p>' if addr_line else ''}
-        {f'<p style="color: #666; font-size: 13px; margin: 0 0 12px 0;">{contact_line}</p>' if contact_line else ''}
-    </div>
-    """
+    return ""
 
 
 def send_contact_inquiry_email(name: str, email: str, phone: str, subject: str, message: str):
     """Send notification email for contact inquiry"""
-    admin_html = f"""
-    <html>
-        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {get_email_header()}
-                <div style="padding: 30px;">
-                    <h2 style="color: #006332; margin-top: 0;">New Contact Inquiry</h2>
-                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #006332;">
-                        <p style="margin: 8px 0;"><strong>Name:</strong> {name}</p>
-                        <p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:{email}" style="color: #006332;">{email}</a></p>
-                        <p style="margin: 8px 0;"><strong>Phone:</strong> {phone}</p>
-                        <p style="margin: 8px 0;"><strong>Subject:</strong> {subject}</p>
-                    </div>
-                    <h3 style="color: #333;">Message:</h3>
-                    <div style="background-color: #fff; padding: 15px; border: 1px solid #e9ecef; border-radius: 8px;">
-                        <p style="margin: 0; white-space: pre-wrap;">{message}</p>
-                    </div>
-                </div>
-                {get_email_footer()}
-            </div>
-        </body>
-    </html>
-    """
-    send_email([ADMIN_EMAIL], f"New Contact Inquiry: {subject}", admin_html)
-    
-    # User confirmation
-    user_html = f"""
-    <html>
-        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {get_email_header()}
-                <div style="padding: 30px;">
-                    <h2 style="color: #006332; margin-top: 0;">Thank You for Contacting Us</h2>
-                    <p>Dear {name},</p>
-                    <p>Thank you for reaching out to Hampton Scientific. We have received your inquiry and our team will respond within 24 hours.</p>
-                    <div style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 0; color: #2e7d32;"><strong>Reference:</strong> Your message about "{subject}"</p>
-                    </div>
-                    <p>Best regards,<br><strong>Hampton Scientific Team</strong></p>
-                </div>
-                {get_email_footer()}
-            </div>
-        </body>
-    </html>
-    """
+    company_info = _get_company_info_from_db()
+    details = email_detail_card([
+        ("Name", e(name)),
+        ("Email", mailto(email)),
+        ("Phone", e(phone)),
+        ("Subject", e(subject)),
+    ])
+    message_block = (
+        email_section_title("Your message")
+        + email_panel(e((message or "").strip()))
+    )
+
+    admin_html = render_email(
+        "New Contact Inquiry",
+        details + message_block,
+        eyebrow="Website inquiry",
+        company_info=company_info,
+    )
+    send_email([_admin_inbox()], f"New Contact Inquiry: {subject}", admin_html)
+
+    user_html = render_email(
+        "We've Received Your Inquiry",
+        (
+            email_greeting(name, "Thank you for contacting Hampton Scientific. Here is a copy of what you submitted — our team will respond within 24 hours.")
+            + email_status_row([
+                ("Submitted", "done"),
+                ("Under review", "current"),
+                ("Reply sent", "todo"),
+            ])
+            + email_section_title("Inquiry details")
+            + details
+            + message_block
+            + email_highlight("Keep this email for your records. Reply anytime if you need to add more information.")
+            + _company_signature_html(company_info)
+        ),
+        eyebrow="We've got your message",
+        company_info=company_info,
+    )
     send_email([email], "We've Received Your Inquiry - Hampton Scientific", user_html)
 
 
-def send_quote_request_email(facility_name: str, contact_person: str, email: str, phone: str, items: list):
-    """Send notification email for quote request"""
-    items_html = ""
-    total_value = 0
-    for item in items:
-        unit_price = item.get('unit_price', 0) or 0
-        quantity = item.get('quantity', 1)
-        subtotal = unit_price * quantity
-        total_value += subtotal
-        items_html += f"""
-        <tr>
-            <td style="padding: 12px; border-bottom: 1px solid #e9ecef;">{item['product_name']}</td>
-            <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: center;">{quantity}</td>
-            <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: right;">KES {unit_price:,.0f}</td>
-            <td style="padding: 12px; border-bottom: 1px solid #e9ecef; text-align: right; font-weight: bold;">KES {subtotal:,.0f}</td>
-        </tr>
-        """
-    
-    admin_html = f"""
-    <html>
-        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-            <div style="max-width: 700px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {get_email_header()}
-                <div style="padding: 30px;">
-                    <h2 style="color: #006332; margin-top: 0;">New Quote Request</h2>
-                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #006332;">
-                        <p style="margin: 8px 0;"><strong>Facility:</strong> {facility_name}</p>
-                        <p style="margin: 8px 0;"><strong>Contact:</strong> {contact_person}</p>
-                        <p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:{email}" style="color: #006332;">{email}</a></p>
-                        <p style="margin: 8px 0;"><strong>Phone:</strong> {phone}</p>
-                    </div>
-                    <h3 style="color: #333;">Requested Items ({len(items)}):</h3>
-                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                        <thead>
-                            <tr style="background: linear-gradient(135deg, #006332 0%, #00a550 100%);">
-                                <th style="padding: 12px; text-align: left; color: white;">Product</th>
-                                <th style="padding: 12px; text-align: center; color: white;">Qty</th>
-                                <th style="padding: 12px; text-align: right; color: white;">Unit Price</th>
-                                <th style="padding: 12px; text-align: right; color: white;">Subtotal</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {items_html}
-                        </tbody>
-                        <tfoot>
-                            <tr style="background-color: #f8f9fa;">
-                                <td colspan="3" style="padding: 15px; text-align: right; font-weight: bold;">Estimated Total:</td>
-                                <td style="padding: 15px; text-align: right; font-weight: bold; color: #006332; font-size: 18px;">KES {total_value:,.0f}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-                {get_email_footer()}
-            </div>
-        </body>
-    </html>
+def send_quote_request_email(
+    facility_name: str,
+    contact_person: str,
+    email: str,
+    phone: str,
+    items: list,
+    additional_notes: str = "",
+    address: str = "",
+    branch_name: str = "",
+):
     """
-    send_email([ADMIN_EMAIL], f"New Quote Request from {facility_name}", admin_html)
-    
-    # User confirmation - NO pricing shown
-    user_html = f"""
-    <html>
-        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.8; color: #333; margin: 0; padding: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {get_email_header()}
-                <div style="padding: 30px;">
-                    <h2 style="color: #006332; margin-top: 0; font-size: 22px;">Quote Request Received!</h2>
-                    <p style="font-size: 16px;">Dear {contact_person},</p>
-                    <p style="font-size: 16px;">Thank you for your quote request. We have received your request for <strong>{len(items)} item(s)</strong> and will send you a detailed quotation within 24-48 hours.</p>
-                    <div style="background-color: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-                        <p style="margin: 0; font-size: 18px; color: #2e7d32;"><strong>Your request is being reviewed</strong></p>
-                        <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;">You will receive a detailed quotation with pricing shortly</p>
-                    </div>
-                    <p style="font-size: 16px;">If you have any urgent queries, please contact us at <strong>{_company_info.get('phone', '')}</strong>.</p>
-                    <p style="font-size: 16px;">Best regards,<br><strong>{_company_info.get('company_name', 'Hampton Scientific')} Team</strong></p>
-                </div>
-                {get_email_footer()}
-            </div>
-        </body>
-    </html>
+    Notify admin + customer after a quote submission.
+
+    Two templates:
+    - Product quote (items present): cart/product line details
+    - Website inquiry (no items): contact form fields + typed message/categories
     """
+    if items:
+        _send_product_quote_request_emails(
+            facility_name=facility_name,
+            contact_person=contact_person,
+            email=email,
+            phone=phone,
+            items=items,
+            additional_notes=additional_notes,
+            address=address,
+            branch_name=branch_name,
+        )
+    else:
+        _send_quote_inquiry_emails(
+            facility_name=facility_name,
+            contact_person=contact_person,
+            email=email,
+            phone=phone,
+            additional_notes=additional_notes,
+        )
+
+
+def _parse_quote_inquiry_notes(notes: str) -> tuple[str, str]:
+    """Split contact-form notes into categories line + free-text message."""
+    text = (notes or "").strip()
+    if not text:
+        return "", ""
+    lines = text.splitlines()
+    categories = ""
+    message_lines = []
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if i == 0 and stripped.lower().startswith("categories:"):
+            categories = stripped.split(":", 1)[1].strip()
+            continue
+        if i == 0 and stripped.lower().startswith("category:"):
+            categories = stripped.split(":", 1)[1].strip()
+            continue
+        message_lines.append(line)
+    return categories, "\n".join(message_lines).strip()
+
+
+def _send_quote_inquiry_emails(
+    *,
+    facility_name: str,
+    contact_person: str,
+    email: str,
+    phone: str,
+    additional_notes: str = "",
+):
+    """Website Contact → Request quote (no cart products)."""
+    company_info = _get_company_info_from_db()
+    categories, message = _parse_quote_inquiry_notes(additional_notes)
+    contact_card = email_detail_card([
+        ("Facility", e(facility_name)),
+        ("Contact", e(contact_person)),
+        ("Email", mailto(email)),
+        ("Phone", e(phone)),
+        ("Product categories", e(categories) if categories else None),
+    ])
+    message_block = ""
+    if message:
+        message_block = email_section_title("Your message") + email_panel(e(message))
+    elif additional_notes and not categories:
+        message_block = email_section_title("Your message") + email_panel(e(additional_notes.strip()))
+
+    admin_html = render_email(
+        "New Quote Inquiry",
+        contact_card + message_block,
+        eyebrow="Website quote request",
+        company_info=company_info,
+    )
+    send_email([_admin_inbox()], f"New Quote Inquiry from {facility_name}", admin_html)
+
+    phone_line = e(company_info.get("phone") or "")
+    user_html = render_email(
+        "We've Received Your Quote Request",
+        (
+            email_greeting(
+                contact_person,
+                "Thank you for requesting a quotation. Here is a copy of what you submitted — our team will prepare pricing and respond within 24–48 hours.",
+            )
+            + email_status_row([
+                ("Request received", "done"),
+                ("Preparing quote", "current"),
+                ("Quote sent", "todo"),
+            ])
+            + email_section_title("Request details")
+            + contact_card
+            + message_block
+            + email_highlight(
+                "<strong>Keep this email for your records.</strong><br>"
+                '<span style="font-size:13px;">We will follow up with an official quotation based on the categories and details you provided.</span>'
+            )
+            + (f'<p style="margin:0 0 8px 0;">For urgent queries, call us at <strong style="color:{INK};">{phone_line}</strong>.</p>' if phone_line else "")
+            + _company_signature_html(company_info)
+        ),
+        eyebrow="Quote inquiry",
+        company_info=company_info,
+    )
+    send_email([email], "Quote Request Received - Hampton Scientific", user_html)
+
+
+def _send_product_quote_request_emails(
+    *,
+    facility_name: str,
+    contact_person: str,
+    email: str,
+    phone: str,
+    items: list,
+    additional_notes: str = "",
+    address: str = "",
+    branch_name: str = "",
+):
+    """Quote cart / product selection submission."""
+    company_info = _get_company_info_from_db()
+    admin_rows, total_value = email_item_rows(items, show_prices=True)
+    client_rows, _ = email_item_rows(items, show_prices=False)
+    contact_card = email_detail_card([
+        ("Facility", e(facility_name)),
+        ("Contact", e(contact_person)),
+        ("Email", mailto(email)),
+        ("Phone", e(phone)),
+        ("Branch", e(branch_name) if branch_name else None),
+        ("Address", e(address) if address else None),
+    ])
+    notes_block = ""
+    if additional_notes and str(additional_notes).strip():
+        notes_block = email_section_title("Additional notes") + email_panel(e(str(additional_notes).strip()))
+
+    admin_html = render_email(
+        "New Product Quote Request",
+        (
+            contact_card
+            + email_section_title(f"Quoted products ({len(items)})")
+            + email_items_table(
+                admin_rows,
+                footer_label="Estimated total",
+                footer_value=f"KES {total_value:,.0f}",
+            )
+            + notes_block
+        ),
+        eyebrow="Product quote",
+        company_info=company_info,
+    )
+    send_email([_admin_inbox()], f"New Product Quote from {facility_name}", admin_html)
+
+    phone_line = e(company_info.get("phone") or "")
+    user_html = render_email(
+        "Quote Request Received",
+        (
+            email_greeting(
+                contact_person,
+                f"Thank you for your quote request for <strong style=\"color:{INK};\">{len(items)} product(s)</strong>. "
+                "We are preparing a detailed quotation and will send it within 24–48 hours.",
+            )
+            + email_status_row([
+                ("Request received", "done"),
+                ("Preparing quote", "current"),
+                ("Quote sent", "todo"),
+            ])
+            + email_section_title("Your details")
+            + contact_card
+            + email_section_title("Products requested")
+            + email_items_table(
+                client_rows,
+                columns=[("Product", "left"), ("Qty", "center")],
+            )
+            + notes_block
+            + email_highlight(
+                "<strong>Pricing will follow in your official quotation.</strong><br>"
+                '<span style="font-size:13px;">This confirmation lists the products you selected so you can keep a record.</span>'
+            )
+            + (f'<p style="margin:0 0 8px 0;">For urgent queries, call us at <strong style="color:{INK};">{phone_line}</strong>.</p>' if phone_line else "")
+            + _company_signature_html(company_info)
+        ),
+        eyebrow="Product quote",
+        company_info=company_info,
+    )
     send_email([email], "Quote Request Received - Hampton Scientific", user_html)
 
 
 def send_training_registration_email(facility_name: str, contact_person: str, email: str, phone: str, training_type: str, message: str = ""):
     """Send notification email for training registration"""
-    admin_html = f"""
-    <html>
-        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {get_email_header()}
-                <div style="padding: 30px;">
-                    <h2 style="color: #006332; margin-top: 0;">New Training Registration</h2>
-                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #006332;">
-                        <p style="margin: 8px 0;"><strong>Facility:</strong> {facility_name}</p>
-                        <p style="margin: 8px 0;"><strong>Contact:</strong> {contact_person}</p>
-                        <p style="margin: 8px 0;"><strong>Email:</strong> <a href="mailto:{email}" style="color: #006332;">{email}</a></p>
-                        <p style="margin: 8px 0;"><strong>Phone:</strong> {phone}</p>
-                        <p style="margin: 8px 0;"><strong>Training Type:</strong> {training_type}</p>
-                    </div>
-                    {f'<div style="margin-top: 20px;"><h3>Additional Notes:</h3><p>{message}</p></div>' if message else ''}
-                </div>
-                {get_email_footer()}
-            </div>
-        </body>
-    </html>
-    """
-    send_email([ADMIN_EMAIL], f"New Training Registration: {training_type}", admin_html)
-    
-    user_html = f"""
-    <html>
-        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {get_email_header()}
-                <div style="padding: 30px;">
-                    <h2 style="color: #006332; margin-top: 0;">Training Registration Confirmed!</h2>
-                    <p>Dear {contact_person},</p>
-                    <p>Thank you for registering for our training program. We will contact you shortly to schedule your training session.</p>
-                    <div style="background-color: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
-                        <p style="margin: 0; font-size: 16px; color: #2e7d32;"><strong>{training_type}</strong></p>
-                    </div>
-                    <p>Best regards,<br><strong>Hampton Scientific Team</strong></p>
-                </div>
-                {get_email_footer()}
-            </div>
-        </body>
-    </html>
-    """
+    company_info = _get_company_info_from_db()
+    details = email_detail_card([
+        ("Facility", e(facility_name)),
+        ("Contact", e(contact_person)),
+        ("Email", mailto(email)),
+        ("Phone", e(phone)),
+        ("Training type", e(training_type)),
+    ])
+    notes = ""
+    if message and str(message).strip():
+        notes = email_section_title("Additional notes") + email_panel(e(str(message).strip()))
+
+    admin_html = render_email(
+        "New Training Registration",
+        details + notes,
+        eyebrow="Training inquiry",
+        company_info=company_info,
+    )
+    send_email([_admin_inbox()], f"New Training Registration: {training_type}", admin_html)
+
+    user_html = render_email(
+        "Training Registration Confirmed",
+        (
+            email_greeting(
+                contact_person,
+                "Thank you for registering for our training program. Here is a copy of your registration details — we will contact you shortly to schedule your session.",
+            )
+            + email_status_row([
+                ("Registered", "done"),
+                ("Scheduling", "current"),
+                ("Confirmed", "todo"),
+            ])
+            + email_section_title("Registration details")
+            + details
+            + notes
+            + email_highlight(f'<strong>Program:</strong> {e(training_type)}')
+            + _company_signature_html(company_info)
+        ),
+        eyebrow="Training",
+        company_info=company_info,
+    )
     send_email([email], "Training Registration Confirmed - Hampton Scientific", user_html)
 
 
 def send_newsletter_welcome_email(email: str):
     """Send welcome email for newsletter subscription"""
-    html_content = f"""
-    <html>
-        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {get_email_header()}
-                <div style="padding: 30px;">
-                    <h2 style="color: #006332; margin-top: 0;">Welcome to Our Newsletter!</h2>
-                    <p>Thank you for subscribing to the Hampton Scientific newsletter.</p>
-                    <p>You'll now receive updates about:</p>
-                    <ul style="padding-left: 20px;">
-                        <li>New medical equipment and supplies</li>
-                        <li>Training programs and workshops</li>
-                        <li>Industry news and innovations</li>
-                        <li>Special offers and promotions</li>
-                    </ul>
-                    <p>Best regards,<br><strong>Hampton Scientific Team</strong></p>
-                </div>
-                {get_email_footer()}
-            </div>
-        </body>
-    </html>
-    """
+    from utils.newsletter_tokens import newsletter_unsubscribe_url
+
+    company_info = _get_company_info_from_db()
+    unsub = newsletter_unsubscribe_url(email, frontend_url)
+    html_content = render_email(
+        "Welcome to Our Newsletter",
+        (
+            '<p style="margin:0 0 14px 0;">Thank you for subscribing to the Hampton Scientific newsletter.</p>'
+            '<p style="margin:0 0 8px 0;">You’ll now receive updates about:</p>'
+            f'<ul style="margin:0 0 18px 0; padding-left:20px; color:{MUTED};">'
+            "<li>New medical equipment and supplies</li>"
+            "<li>Training programs and workshops</li>"
+            "<li>Industry news and innovations</li>"
+            "<li>Special offers and promotions</li>"
+            "</ul>"
+            + _company_signature_html(company_info)
+            + _newsletter_unsubscribe_footer(unsub)
+        ),
+        eyebrow="Stay informed",
+        company_info=company_info,
+    )
     send_email([email], "Welcome to Hampton Scientific Newsletter", html_content)
+
+
+def send_newsletter_already_subscribed_email(email: str):
+    """Confirm an address that is already on the newsletter list."""
+    from utils.newsletter_tokens import newsletter_unsubscribe_url
+
+    company_info = _get_company_info_from_db()
+    unsub = newsletter_unsubscribe_url(email, frontend_url)
+    html_content = render_email(
+        "You're already subscribed",
+        (
+            '<p style="margin:0 0 14px 0;">Good news — this email is already on the Hampton Scientific newsletter list.</p>'
+            '<p style="margin:0 0 14px 0;">You’ll continue to receive updates on equipment, training, and healthcare innovation. No further action is needed.</p>'
+            + _company_signature_html(company_info)
+            + _newsletter_unsubscribe_footer(unsub)
+        ),
+        eyebrow="Newsletter",
+        company_info=company_info,
+    )
+    send_email([email], "You're already subscribed — Hampton Scientific", html_content)
+
+
+def _newsletter_unsubscribe_footer(unsubscribe_url: str) -> str:
+    return (
+        f'<p style="margin:28px 0 0 0; padding-top:16px; border-top:1px solid {BORDER}; '
+        f'font-size:12px; line-height:1.5; color:{MUTED}; text-align:center;">'
+        "You’re receiving this because you subscribed to the Hampton Scientific newsletter.<br>"
+        f'<a href="{e(unsubscribe_url)}" style="color:{MUTED}; text-decoration:underline;">Unsubscribe</a>'
+        "</p>"
+    )
 
 
 def send_password_reset_email(email: str, reset_token: str, reset_url: str):
     """Send password reset email"""
-    html_content = f"""
-    <html>
-        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {get_email_header()}
-                <div style="padding: 30px;">
-                    <h2 style="color: #006332; margin-top: 0;">Reset Your Password</h2>
-                    <p>We received a request to reset your password. Click the button below to create a new password:</p>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="{reset_url}" style="background: linear-gradient(135deg, #006332 0%, #00a550 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Reset Password</a>
-                    </div>
-                    <p style="color: #666; font-size: 14px;">This link will expire in 1 hour for security reasons.</p>
-                    <p style="color: #666; font-size: 14px;">If you didn't request a password reset, you can safely ignore this email.</p>
-                    <hr style="border: none; border-top: 1px solid #e9ecef; margin: 20px 0;">
-                    <p style="color: #999; font-size: 12px;">If the button doesn't work, copy and paste this link into your browser:<br><a href="{reset_url}" style="color: #006332; word-break: break-all;">{reset_url}</a></p>
-                </div>
-                {get_email_footer()}
-            </div>
-        </body>
-    </html>
-    """
+    _ = reset_token
+    company_info = _get_company_info_from_db()
+    html_content = render_email(
+        "Reset Your Password",
+        (
+            '<p style="margin:0 0 14px 0;">We received a request to reset your password. Click the button below to create a new one:</p>'
+            + email_cta("Reset Password", reset_url)
+            + email_highlight("This link expires in 1 hour for security. If you didn’t request a reset, you can ignore this email.", tone="amber")
+            + f'<p style="margin:18px 0 0 0; font-size:12px; color:{MUTED};">If the button doesn’t work, copy this link:<br>'
+            f'<a href="{e(reset_url)}" style="color:{GREEN}; word-break:break-all;">{e(reset_url)}</a></p>'
+        ),
+        eyebrow="Account security",
+        company_info=company_info,
+    )
     send_email([email], "Reset Your Password - Hampton Scientific", html_content)
 
 
 def send_welcome_email(first_name: str, email: str):
     """Send welcome email after registration"""
-    html_content = f"""
-    <html>
-        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {get_email_header()}
-                <div style="padding: 30px;">
-                    <h2 style="color: #006332; margin-top: 0;">Welcome to Hampton Scientific!</h2>
-                    <p>Dear {first_name},</p>
-                    <p>Thank you for creating an account with Hampton Scientific. You can now:</p>
-                    <ul style="padding-left: 20px;">
-                        <li>Request quotes for medical equipment</li>
-                        <li>Track your quote history</li>
-                        <li>Register for training programs</li>
-                        <li>Get personalized support</li>
-                    </ul>
-                    <div style="text-align: center; margin: 30px 0;">
-                        <a href="https://hamptonscientific.com/products" style="background: linear-gradient(135deg, #006332 0%, #00a550 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Browse Products</a>
-                    </div>
-                    <p>Best regards,<br><strong>Hampton Scientific Team</strong></p>
-                </div>
-                {get_email_footer()}
-            </div>
-        </body>
-    </html>
-    """
+    company_info = _get_company_info_from_db()
+    products_url = f"{frontend_url.rstrip('/')}/products"
+    html_content = render_email(
+        "Welcome to Hampton Scientific",
+        (
+            f'<p style="margin:0 0 14px 0;">Dear {e(first_name_only(first_name))},</p>'
+            '<p style="margin:0 0 8px 0;">Thank you for creating an account. You can now:</p>'
+            f'<ul style="margin:0 0 8px 0; padding-left:20px; color:{MUTED};">'
+            "<li>Request quotes for medical equipment</li>"
+            "<li>Track your quote history</li>"
+            "<li>Register for training programs</li>"
+            "<li>Get personalized support</li>"
+            "</ul>"
+            + email_cta("Browse Products", products_url)
+            + _company_signature_html(company_info)
+        ),
+        eyebrow="Welcome aboard",
+        company_info=company_info,
+    )
     send_email([email], "Welcome to Hampton Scientific!", html_content)
 
 
 def send_quote_status_update_email(contact_person: str, email: str, facility_name: str, old_status: str, new_status: str, quote_id: str):
     """Send email notification when quote status changes"""
+    company_info = _get_company_info_from_db()
     status_messages = {
         "quoted": ("Quote Ready", "Your official quotation has been prepared and is ready for review."),
         "invoiced": ("Invoice Created", "An invoice has been created for your quote."),
         "completed": ("Order Completed", "Your order has been completed successfully. Thank you for choosing Hampton Scientific!"),
-        "cancelled": ("Quote Cancelled", "Your quote request has been cancelled. If you have any questions, please contact us.")
+        "cancelled": ("Quote Cancelled", "Your quote request has been cancelled. If you have any questions, please contact us."),
     }
-    
-    status_title, status_message = status_messages.get(new_status, ("Status Updated", f"Your quote status has been updated to {new_status}."))
-    
-    status_color = {
-        "quoted": "#3b82f6",
-        "invoiced": "#22c55e",
-        "completed": "#22c55e",
-        "cancelled": "#ef4444"
-    }.get(new_status, "#6b7280")
-    
-    html_content = f"""
-    <html>
-        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {get_email_header()}
-                <div style="padding: 30px;">
-                    <h2 style="color: #006332; margin-top: 0;">Quote Status Update</h2>
-                    <p>Dear {contact_person},</p>
-                    
-                    <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid {status_color};">
-                        <p style="margin: 0 0 10px 0; font-size: 18px; font-weight: bold; color: {status_color};">{status_title}</p>
-                        <p style="margin: 0; color: #666;">{status_message}</p>
-                    </div>
-                    
-                    <div style="background-color: #fff; padding: 15px; border: 1px solid #e9ecef; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 5px 0;"><strong>Quote Reference:</strong> {quote_id[:8].upper()}</p>
-                        <p style="margin: 5px 0;"><strong>Facility:</strong> {facility_name}</p>
-                        <p style="margin: 5px 0;"><strong>Previous Status:</strong> {old_status.title()}</p>
-                        <p style="margin: 5px 0;"><strong>New Status:</strong> <span style="color: {status_color}; font-weight: bold;">{new_status.title()}</span></p>
-                    </div>
-                    
-                    <p>If you have any questions or need assistance, please don't hesitate to contact us.</p>
-                    
-                    <p>Best regards,<br><strong>Hampton Scientific Team</strong></p>
-                </div>
-                {get_email_footer()}
-            </div>
-        </body>
-    </html>
-    """
+    status_title, status_message = status_messages.get(
+        new_status, ("Status Updated", f"Your quote status has been updated to {new_status}.")
+    )
+    tone = "red" if new_status == "cancelled" else "green"
+    ref = (quote_id or "")[:8].upper()
+    html_content = render_email(
+        "Quote Status Update",
+        (
+            f'<p style="margin:0 0 14px 0;">Dear {e(first_name_only(contact_person))},</p>'
+            + email_highlight(f"<strong>{e(status_title)}</strong><br>{e(status_message)}", tone=tone)
+            + email_detail_card([
+                ("Quote reference", e(ref)),
+                ("Facility", e(facility_name)),
+                ("Previous status", e((old_status or "").title())),
+                ("New status", e((new_status or "").title())),
+            ])
+            + f'<p style="margin:0 0 8px 0;">If you have any questions, reply to this email or contact us anytime.</p>'
+            + _company_signature_html(company_info)
+        ),
+        eyebrow=status_title,
+        company_info=company_info,
+    )
     send_email([email], f"Quote Status Update: {status_title} - Hampton Scientific", html_content)
 
 
@@ -587,16 +758,54 @@ def send_modified_quote_email(
     subject_ref = qref or (qid[:8].upper() if qid else "")
     subject = f"Quotation from Hampton Scientific Limited - {subject_ref}" if subject_ref else "Quotation from Hampton Scientific Limited"
 
+    item_rows, _ = email_item_rows(items, show_prices=True)
+    vat_label = f"VAT ({float(tax_rate or 0):g}%)" if include_vat else "VAT (excluded)"
+    totals_rows = [
+        ("Subtotal", f"KES {float(subtotal or 0):,.0f}"),
+    ]
+    if float(discount or 0) > 0:
+        totals_rows.append(("Discount", f"- KES {float(discount):,.0f}"))
+    if include_vat:
+        totals_rows.append((vat_label, f"KES {float(tax_amount or 0):,.0f}"))
+
     body = (
-        f"<p>Dear {customer_name},</p>"
-        "<p>Please find the attached quotation as per your recent request.</p>"
-        "<p>Thank you for choosing Hampton Scientific Limited as your trusted medical supplier and trainer. "
-        "We are committed to providing you with high-quality medical equipment and professional training services to support your operations.</p>"
-        f"<p>This quotation is valid for {int(validity_days)} days. Should you have any questions or wish to proceed with an order, please feel free to contact us.</p>"
-        "<p>Best regards,</p>"
-        f"{_company_signature_html(company_info)}"
+        email_greeting(
+            customer_name,
+            "Your quotation is ready. Please find a summary below and the full PDF attached for your records.",
+        )
+        + email_status_row([
+            ("Request received", "done"),
+            ("Quote prepared", "done"),
+            ("Your review", "current"),
+        ])
+        + email_section_title("Quote summary")
+        + email_detail_card([
+            ("Quote reference", e(subject_ref)),
+            ("Facility", e(facility_name)),
+            ("Validity", f"{int(validity_days)} days"),
+            ("Items", str(len(items or []))),
+        ])
+        + email_section_title("Line items")
+        + email_items_table(
+            item_rows,
+            footer_label="Total",
+            footer_value=f"KES {float(total or 0):,.0f}",
+        )
+        + email_totals_block(
+            totals_rows,
+            total_label=f"Total ({len(items or [])} item{'s' if len(items or []) != 1 else ''})",
+            total_value=f"KES {float(total or 0):,.0f}",
+        )
+        + email_info_grid([
+            ("Facility", e(facility_name or "—")),
+            ("Contact", f"{e(contact_person or '—')}<br>{mailto(email)}"),
+            ("Next step", "Review the attached PDF and reply to accept or request changes."),
+        ])
+        + (email_section_title("Notes") + email_panel(e(notes)) if notes else "")
+        + email_highlight("The attached PDF is the official quotation. Reply to this email to proceed with an order.")
+        + _company_signature_html(company_info)
     )
-    html = _wrap_plain_email(body)
+    html = _wrap_document_email("Your Quotation", body, eyebrow="Quotation", company_info=company_info)
 
     async def _send():
         pdf_b64 = await generate_quote_pdf(quote_data, company_info, is_modified=True)
@@ -664,17 +873,66 @@ def send_invoice_email(
     }
 
     subject = f"Invoice from Hampton Scientific Limited - {invoice_number}"
+    item_rows, _ = email_item_rows(items, show_prices=True)
+    due_display = e(due_date) if due_date else "See attached PDF"
+    # Format ISO-ish due dates more nicely when possible
+    parsed_due = _parse_iso(due_date)
+    if parsed_due:
+        try:
+            due_display = parsed_due.strftime("%d %B %Y")
+        except Exception:
+            due_display = e(due_date)
+
+    totals_rows = [("Subtotal", f"KES {float(subtotal or 0):,.0f}")]
+    if float(discount or 0) > 0:
+        totals_rows.append(("Discount", f"- KES {float(discount):,.0f}"))
+    if include_vat:
+        totals_rows.append((f"VAT ({float(tax_rate or 0):g}%)", f"KES {float(tax_amount or 0):,.0f}"))
+
+    status_steps = [
+        ("Invoice issued", "done"),
+        ("Awaiting payment", "current" if not is_paid else "done"),
+        ("Paid", "done" if is_paid else "todo"),
+    ]
+
     body = (
-        f"<p>Dear {customer_name},</p>"
-        "<p>Please find the attached invoice regarding your recent order/service.</p>"
-        "<p>Thank you for choosing Hampton Scientific Limited as your trusted medical supplier and trainer. "
-        "We appreciate your partnership and remain dedicated to delivering excellence in both our medical supplies and our specialized training programs.</p>"
-        "<p>Kindly refer to the \"Payment Information\" section on the attached document for our bank and M-Pesa details. "
-        "Please let us know once the payment has been processed so we can update your records.</p>"
-        "<p>Best regards,</p>"
-        f"{_company_signature_html(company_info)}"
+        email_greeting(
+            customer_name,
+            "Please find your invoice summary below. The official PDF is attached for payment and your records.",
+        )
+        + email_status_row(status_steps)
+        + email_section_title("Invoice summary")
+        + email_detail_card([
+            ("Invoice number", e(invoice_number)),
+            ("Facility", e(facility_name)),
+            ("Amount due", f"KES {float(total or 0):,.0f}"),
+            ("Due date", due_display),
+            ("Payment terms", e(payment_terms or "Net 14")),
+        ])
+        + email_section_title("Line items")
+        + email_items_table(
+            item_rows,
+            footer_label="Total",
+            footer_value=f"KES {float(total or 0):,.0f}",
+        )
+        + email_totals_block(
+            totals_rows,
+            total_label=f"Total ({len(items or [])} item{'s' if len(items or []) != 1 else ''})",
+            total_value=f"KES {float(total or 0):,.0f}",
+        )
+        + email_info_grid([
+            ("Bill to", f"{e(facility_name or '—')}<br>{e(contact_person or '')}"),
+            ("Due date", due_display),
+            ("Payment", "See bank &amp; M-Pesa details on the attached PDF."),
+        ])
+        + (email_section_title("Notes") + email_panel(e(notes)) if notes else "")
+        + email_highlight(
+            'Kindly refer to the <strong>Payment Information</strong> section on the attached PDF. '
+            "Please let us know once payment has been processed so we can update your records."
+        )
+        + _company_signature_html(company_info)
     )
-    html = _wrap_plain_email(body)
+    html = _wrap_document_email("Your Invoice", body, eyebrow="Invoice", company_info=company_info)
 
     async def _send():
         pdf_b64 = await generate_invoice_pdf(invoice_data, company_info, is_paid=is_paid)
@@ -690,201 +948,185 @@ def send_invoice_email(
 
 def send_user_created_by_admin_email(first_name: str, email: str, temp_password: str, can_login: bool, facility_name: str):
     """Send email to user created by admin"""
+    company_info = _get_company_info_from_db()
+    login_url = f"{frontend_url.rstrip('/')}/login"
     if can_login:
-        html_content = f"""
-        <html>
-            <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-                <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    {get_email_header()}
-                    <div style="padding: 30px;">
-                        <h2 style="color: #006332; margin-top: 0;">Your Account Has Been Created</h2>
-                        <p>Dear {first_name},</p>
-                        <p>An account has been created for you at Hampton Scientific. You can now access our portal to view quotes, place orders, and manage your profile.</p>
-                        
-                        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #006332;">
-                            <p style="margin: 8px 0;"><strong>Facility:</strong> {facility_name}</p>
-                            <p style="margin: 8px 0;"><strong>Email:</strong> {email}</p>
-                            <p style="margin: 8px 0;"><strong>Temporary Password:</strong> <code style="background: #e9ecef; padding: 2px 8px; border-radius: 4px;">{temp_password}</code></p>
-                        </div>
-                        
-                        <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                            <p style="margin: 0; color: #92400e;">⚠️ Please change your password after your first login for security.</p>
-                        </div>
-                        
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="https://hamptonscientific.com/login" style="background: linear-gradient(135deg, #006332 0%, #00a550 100%); color: white; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">Login to Your Account</a>
-                        </div>
-                        
-                        <p>Best regards,<br><strong>Hampton Scientific Team</strong></p>
-                    </div>
-                    {get_email_footer()}
-                </div>
-            </body>
-        </html>
-        """
+        html_content = render_email(
+            "Your Account Has Been Created",
+            (
+                f'<p style="margin:0 0 14px 0;">Dear {e(first_name_only(first_name))},</p>'
+                '<p style="margin:0 0 14px 0;">An account has been created for you at Hampton Scientific. You can now access our portal to view quotes, place orders, and manage your profile.</p>'
+                + email_detail_card([
+                    ("Facility", e(facility_name)),
+                    ("Email", mailto(email)),
+                    ("Temporary password", f'<code style="background:#e8e4df; padding:2px 8px; border-radius:4px; font-size:13px;">{e(temp_password)}</code>'),
+                ])
+                + email_highlight("Please change your password after your first login for security.", tone="amber")
+                + email_cta("Log in to your account", login_url)
+                + _company_signature_html(company_info)
+            ),
+            eyebrow="Portal access",
+            company_info=company_info,
+        )
         send_email([email], "Your Hampton Scientific Account Has Been Created", html_content)
     else:
-        html_content = f"""
-        <html>
-            <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-                <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                    {get_email_header()}
-                    <div style="padding: 30px;">
-                        <h2 style="color: #006332; margin-top: 0;">Welcome to Hampton Scientific</h2>
-                        <p>Dear {first_name},</p>
-                        <p>Your facility <strong>{facility_name}</strong> has been registered with Hampton Scientific.</p>
-                        <p>Our team will be in touch with you soon to discuss your medical equipment needs and provide personalized support.</p>
-                        <p>If you need immediate assistance, please contact us at:</p>
-                        <ul style="padding-left: 20px;">
-                            <li>Phone: 0717 023 814</li>
-                            <li>Email: info@hamptonscientific.com</li>
-                        </ul>
-                        <p>Best regards,<br><strong>Hampton Scientific Team</strong></p>
-                    </div>
-                    {get_email_footer()}
-                </div>
-            </body>
-        </html>
-        """
+        phone = e(company_info.get("phone") or "")
+        support_email = (company_info.get("email") or DEFAULT_COMPANY_EMAIL).strip()
+        html_content = render_email(
+            "Welcome to Hampton Scientific",
+            (
+                f'<p style="margin:0 0 14px 0;">Dear {e(first_name_only(first_name))},</p>'
+                f'<p style="margin:0 0 14px 0;">Your facility <strong style="color:{INK};">{e(facility_name)}</strong> has been registered with Hampton Scientific.</p>'
+                '<p style="margin:0 0 14px 0;">Our team will be in touch soon to discuss your medical equipment needs and provide personalized support.</p>'
+                + email_detail_card([
+                    ("Phone", phone),
+                    ("Email", mailto(support_email)),
+                ])
+                + _company_signature_html(company_info)
+            ),
+            eyebrow="Facility registered",
+            company_info=company_info,
+        )
         send_email([email], "Welcome to Hampton Scientific", html_content)
 
 
 def send_quote_followup_email(contact_person: str, email: str, facility_name: str, quote_id: str, items: list, custom_message: str = None):
     """Send follow-up email for a quoted price request"""
+    company_info = _get_company_info_from_db()
     items_html = ""
     total = 0
     for item in items:
         price = item.get("unit_price", 0) or 0
         qty = item.get("quantity", 1)
-        line_total = price * qty
-        total += line_total
+        total += price * qty
         items_html += f"""
         <tr>
-            <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">{item.get('product_name', '')}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; text-align: center;">{qty}</td>
-            <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; text-align: right;">KES {price:,.0f}</td>
+            <td style="padding:12px; border-bottom:1px solid {BORDER}; color:{INK}; font-size:14px;">{e(item.get('product_name', ''))}</td>
+            <td style="padding:12px; border-bottom:1px solid {BORDER}; text-align:center; color:{MUTED}; font-size:14px;">{e(qty)}</td>
+            <td style="padding:12px; border-bottom:1px solid {BORDER}; text-align:right; color:{MUTED}; font-size:14px;">KES {price:,.0f}</td>
         </tr>
         """
-    
-    message = custom_message or "We wanted to follow up on the quotation we sent you. Please review the items below and let us know if you have any questions or would like to proceed with your order."
-    
-    html_content = f"""
-    <html>
-        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {get_email_header()}
-                <div style="padding: 30px;">
-                    <h2 style="color: #006332; margin-top: 0;">Quote Follow-Up</h2>
-                    <p>Dear {contact_person or facility_name},</p>
-                    <p>{message}</p>
-                    
-                    <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                        <p style="margin: 5px 0;"><strong>Quote Reference:</strong> {quote_id[:8].upper()}</p>
-                        <p style="margin: 5px 0;"><strong>Facility:</strong> {facility_name}</p>
-                    </div>
-                    
-                    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                        <thead>
-                            <tr style="background: #006332; color: white;">
-                                <th style="padding: 12px; text-align: left;">Product</th>
-                                <th style="padding: 12px; text-align: center;">Qty</th>
-                                <th style="padding: 12px; text-align: right;">Unit Price</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {items_html}
-                        </tbody>
-                        <tfoot>
-                            <tr style="background: #f0f0f0;">
-                                <td colspan="2" style="padding: 12px; text-align: right; font-weight: bold;">Total:</td>
-                                <td style="padding: 12px; text-align: right; font-weight: bold; color: #006332;">KES {total:,.0f}</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                    
-                    <p>To accept this quote or request any changes, please reply to this email or log in to your account.</p>
-                    <p>Best regards,<br><strong>Hampton Scientific Team</strong></p>
-                </div>
-                {get_email_footer()}
-            </div>
-        </body>
-    </html>
-    """
-    send_email([email], f"Quote Follow-Up - Hampton Scientific (Ref: {quote_id[:8].upper()})", html_content)
+
+    message = custom_message or (
+        "We wanted to follow up on the quotation we sent you. Please review the items below and let us know "
+        "if you have any questions or would like to proceed with your order."
+    )
+    ref = (quote_id or "")[:8].upper()
+    html_content = render_email(
+        "Quote Follow-Up",
+        (
+            f'<p style="margin:0 0 14px 0;">Dear {e(first_name_only(contact_person or facility_name))},</p>'
+            f'<p style="margin:0 0 14px 0;">{e(message)}</p>'
+            + email_detail_card([
+                ("Quote reference", e(ref)),
+                ("Facility", e(facility_name)),
+            ])
+            + email_items_table(
+                items_html,
+                footer_label="Total",
+                footer_value=f"KES {total:,.0f}",
+                columns=[("Product", "left"), ("Qty", "center"), ("Unit Price", "right")],
+            )
+            + '<p style="margin:0 0 8px 0;">To accept this quote or request changes, reply to this email or log in to your account.</p>'
+            + _company_signature_html(company_info)
+        ),
+        eyebrow="Following up",
+        company_info=company_info,
+    )
+    send_email([email], f"Quote Follow-Up - Hampton Scientific (Ref: {ref})", html_content)
 
 
 def send_invoice_reminder_email(contact_person: str, email: str, facility_name: str, invoice_number: str, total: float, due_date: str, is_overdue: bool = False):
     """Send invoice payment reminder email"""
-    subject_line = "Invoice Overdue - Action Required" if is_overdue else "Invoice Reminder"
-    
-    html_content = f"""
-    <html>
-        <body style="font-family: 'Segoe UI', Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0;">
-            <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                {get_email_header()}
-                <div style="padding: 30px;">
-                    <h2 style="color: #333; margin-top: 0;">{subject_line}</h2>
-                    <p>Dear {contact_person or facility_name},</p>
-                    
-                    {"<p style='color: #333;'><strong>This invoice is now overdue. Please arrange payment as soon as possible.</strong></p>" if is_overdue else "<p>This is a friendly reminder about your upcoming invoice payment.</p>"}
-                    
-                    <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #333;">
-                        <p style="margin: 5px 0;"><strong>Invoice Number:</strong> {invoice_number}</p>
-                        <p style="margin: 5px 0;"><strong>Amount Due:</strong> <span style="font-size: 1.2em; color: #006332;">KES {total:,.0f}</span></p>
-                        <p style="margin: 5px 0;"><strong>Due Date:</strong> <span style="color: #333; font-weight: bold;">{due_date}</span></p>
-                    </div>
-                    
-                    <div style="background-color: #e8f5e9; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                        <h4 style="margin: 0 0 10px 0; color: #006332;">Payment Information</h4>
-                        <p style="margin: 5px 0;"><strong>Bank:</strong> Kenya Commercial Bank</p>
-                        <p style="margin: 5px 0;"><strong>Account Name:</strong> Hampton Scientific Limited</p>
-                        <p style="margin: 5px 0;"><strong>Account Number:</strong> 1234567890</p>
-                    </div>
-                    
-                    <p>If you have already made this payment, please disregard this reminder.</p>
-                    <p>Best regards,<br><strong>Hampton Scientific Team</strong></p>
-                </div>
-                {get_email_footer()}
-            </div>
-        </body>
-    </html>
-    """
+    company_info = _get_company_info_from_db()
+    subject_line = "Invoice Overdue — Action Required" if is_overdue else "Invoice Reminder"
+    intro = (
+        "<strong>This invoice is now overdue.</strong> Please arrange payment as soon as possible."
+        if is_overdue
+        else "This is a friendly reminder about your upcoming invoice payment."
+    )
+    payment_rows = []
+    if company_info.get("bank_name"):
+        payment_rows.append(("Bank", e(company_info.get("bank_name"))))
+    if company_info.get("bank_account_name"):
+        payment_rows.append(("Account name", e(company_info.get("bank_account_name"))))
+    if company_info.get("bank_account_number"):
+        payment_rows.append(("Account number", e(company_info.get("bank_account_number"))))
+    if company_info.get("mpesa_paybill"):
+        payment_rows.append(("M-Pesa Paybill", e(company_info.get("mpesa_paybill"))))
+    if company_info.get("mpesa_account_number"):
+        payment_rows.append(("M-Pesa account", e(company_info.get("mpesa_account_number"))))
+
+    html_content = render_email(
+        subject_line,
+        (
+            f'<p style="margin:0 0 14px 0;">Dear {e(first_name_only(contact_person or facility_name))},</p>'
+            + email_highlight(intro, tone="red" if is_overdue else "amber")
+            + email_detail_card([
+                ("Invoice number", e(invoice_number)),
+                ("Amount due", f"KES {float(total or 0):,.0f}"),
+                ("Due date", e(due_date)),
+                ("Facility", e(facility_name)),
+            ], accent="#c4704a" if is_overdue else GREEN)
+            + (email_detail_card(payment_rows) if payment_rows else "")
+            + '<p style="margin:0 0 8px 0;">If you have already made this payment, please disregard this reminder.</p>'
+            + _company_signature_html(company_info)
+        ),
+        eyebrow="Payment reminder",
+        company_info=company_info,
+    )
     send_email([email], f"{subject_line} - {invoice_number} - Hampton Scientific", html_content)
 
 
 def send_invoice_reminder_email_from_template(invoice: dict, *, is_overdue: bool = False) -> None:
-    """
-    Reminder email that renders using `invoice_template.html` and attaches the invoice PDF,
-    so reminder content stays consistent with the invoice PDF.
-    """
+    """Reminder email with modern shell + invoice PDF attachment."""
     contact_person = invoice.get("contact_person", "")
     email = invoice.get("email", "")
+    facility_name = invoice.get("facility_name", "")
     invoice_number = invoice.get("invoice_number", "")
     include_vat = bool(invoice.get("include_vat", True))
+    total = invoice.get("total", 0) or 0
+
+    from utils.app_time import format_app
+    due_date = invoice.get("due_date")
+    due_date_str = format_app(due_date, "%B %d, %Y", default="N/A") if due_date else "N/A"
 
     subject_prefix = "Overdue Reminder - " if is_overdue else "Invoice Reminder - "
     subject_vat = "" if include_vat else "Exclusive VAT - "
     subject = f"{subject_prefix}{subject_vat}{invoice_number} - Hampton Scientific"
 
     company_info = _get_company_info_from_db()
-
-    context = build_invoice_context(
-        invoice,
-        company_info,
-        is_paid=False,
-        logo_data="",
-        paid_stamp_data="",
+    subject_line = "Invoice Overdue — Action Required" if is_overdue else "Invoice Reminder"
+    intro = (
+        "<strong>This invoice is now overdue.</strong> Please arrange payment as soon as possible."
+        if is_overdue
+        else "This is a friendly reminder about your upcoming invoice payment. The invoice PDF is attached for your records."
+    )
+    html = render_email(
+        subject_line,
+        (
+            f'<p style="margin:0 0 14px 0;">Dear {e(first_name_only(contact_person or facility_name))},</p>'
+            + email_highlight(intro, tone="red" if is_overdue else "amber")
+            + email_detail_card([
+                ("Invoice number", e(invoice_number)),
+                ("Amount due", f"KES {float(total):,.0f}"),
+                ("Due date", e(due_date_str)),
+                ("Facility", e(facility_name)),
+            ], accent="#c4704a" if is_overdue else GREEN)
+            + '<p style="margin:0 0 8px 0;">If you have already made this payment, please disregard this reminder.</p>'
+            + _company_signature_html(company_info)
+        ),
+        eyebrow="Payment reminder",
+        company_info=company_info,
     )
 
     async def _send():
         pdf_b64 = await generate_invoice_pdf(invoice, company_info, is_paid=False)
-        await _send_document_email(
-            to_email=email,
-            subject=subject,
-            template_name="invoice_template.html",
-            context=context,
-            pdf_filename=f"Invoice_{invoice_number}.pdf",
-            pdf_base64=pdf_b64,
+        await send_email_async(
+            [email],
+            subject,
+            html,
+            attachments=[{"filename": f"Invoice_{invoice_number}.pdf", "content": pdf_b64}],
         )
 
     _run_coro(_send())

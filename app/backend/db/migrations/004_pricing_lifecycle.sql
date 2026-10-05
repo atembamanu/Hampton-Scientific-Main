@@ -1,0 +1,12 @@
+-- Pricing lifecycle: list price snapshots, quoted prices, audit fields
+
+ALTER TABLE quote_items ADD COLUMN IF NOT EXISTS list_price DOUBLE PRECISION;
+ALTER TABLE quote_items ADD COLUMN IF NOT EXISTS admin_notes TEXT;
+ALTER TABLE quote_items ADD COLUMN IF NOT EXISTS quoted_quantity INTEGER;
+
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS list_subtotal DOUBLE PRECISION DEFAULT 0;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS delivery_charge DOUBLE PRECISION DEFAULT 0;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS quoted_at TIMESTAMP;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS quoted_by_user_id TEXT REFERENCES users(id);
+
+ALTER TABLE order_items ADD COLUMN IF NOT EXISTS list_price DOUBLE PRECISION;

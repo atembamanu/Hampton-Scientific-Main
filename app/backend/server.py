@@ -16,11 +16,6 @@ import logging
 import io
 from typing import List, Optional
 from datetime import datetime, timedelta
-from google import genai
-from google.genai import types
-
-# Import models
-from models.user import UserResponse
 
 # Import utilities (NOW safe to import after .env is loaded)
 from utils.auth import (
@@ -33,16 +28,22 @@ from utils.auth import (
     get_admin_user,
 )
 from utils.email_service import set_company_info
+from utils.app_time import install_json_encoders, APP_TIMEZONE_NAME
 from db.init_db import init_db
 from db.session import SessionLocal
 from sqlalchemy import text
 
 # Import route modules
-from routes import products, quotes, invoices, training, contact, stats, auth, admin
+from routes import (
+    products, quotes, invoices, training, contact, stats, auth, admin,
+    facilities, organizations, branches, facility_users, delivery_locations, orders,
+    admin_ops, events, field, admin_facilities, careers,
+)
 
 from contextlib import asynccontextmanager
 from playwright.async_api import async_playwright
 import base64
+import asyncio
 from jinja2 import Environment, FileSystemLoader
 
 # ============================================
@@ -52,6 +53,7 @@ class PDFManager:
     playwright = None
     browser = None
     jinja_env = None
+    _loop = None
 
     @classmethod
     async def start(cls):
@@ -62,6 +64,10 @@ class PDFManager:
             headless=True,
             args=["--no-sandbox", "--disable-dev-shm-usage"]
         )
+        try:
+            cls._loop = asyncio.get_running_loop()
+        except RuntimeError:
+            cls._loop = None
         # Setup Jinja2 (Assumes templates are in a folder named 'templates')
         template_path = ROOT_DIR / "utils" / "templates"
         template_path.mkdir(parents=True, exist_ok=True)
@@ -70,10 +76,37 @@ class PDFManager:
     @classmethod
     async def stop(cls):
         logger.info("Closing Playwright Browser...")
-        if cls.browser:
-            await cls.browser.close()
-        if cls.playwright:
-            await cls.playwright.stop()
+        try:
+            if cls.browser:
+                await cls.browser.close()
+        except Exception:
+            logger.debug("PDFManager browser close failed", exc_info=True)
+        try:
+            if cls.playwright:
+                await cls.playwright.stop()
+        except Exception:
+            logger.debug("PDFManager playwright stop failed", exc_info=True)
+        cls.browser = None
+        cls.playwright = None
+        cls._loop = None
+
+    @classmethod
+    async def ensure_ready(cls):
+        """Restart Playwright if missing or bound to a different event loop."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+        needs_start = cls.browser is None or (cls._loop is not None and loop is not None and cls._loop is not loop)
+        if needs_start:
+            if cls.browser is not None or cls.playwright is not None:
+                try:
+                    await cls.stop()
+                except Exception:
+                    cls.browser = None
+                    cls.playwright = None
+                    cls._loop = None
+            await cls.start()
 
     @classmethod
     async def generate_pdf(cls, template_name: str, data: dict) -> str:
@@ -106,6 +139,8 @@ async def lifespan(app: FastAPI):
     
     scheduler.add_job(run_followup_checks, 'interval', hours=1, id='email_followups', replace_existing=True)
     scheduler.start()
+    from utils.live_events import hub
+    hub.bind_loop(asyncio.get_running_loop())
     
     ci = await get_company_info()
     set_company_info(ci)
@@ -114,11 +149,15 @@ async def lifespan(app: FastAPI):
     
     # SHUTDOWN
     scheduler.shutdown(wait=False)
-    genai_client.close()
     await PDFManager.stop()
 
 # Initialize App with lifespan
 app = FastAPI(title="Hampton Scientific API", lifespan=lifespan)
+
+# All API datetimes go out in the company time zone (APP_TIMEZONE, default Africa/Nairobi)
+# with an explicit offset, so browsers render them in the viewer's local time.
+install_json_encoders()
+logging.getLogger(__name__).info("Company time zone: %s", APP_TIMEZONE_NAME)
 
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
@@ -177,140 +216,20 @@ async def get_company_info() -> dict:
         }
 
 # ============================================
-# Chatbot Route (for product/training queries)
+# Chatbot Route (legacy stub — Gemini / Google API removed)
 # ============================================
-
-# Setup Gemini
-genai_client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY"))
-MODEL_ID = "gemini-2.0-flash"
-
-import time
-
-# Global cache to save tokens and DB hits
-CONTEXT_CACHE = {
-    "data": "",
-    "last_updated": 0
-}
-CACHE_EXPIRY = 3600  # 1 hour in seconds
-
-async def get_cached_system_context():
-    current_time = time.time()
-
-    # If cache is fresh, return it
-    if CONTEXT_CACHE["data"] and (current_time - CONTEXT_CACHE["last_updated"] < CACHE_EXPIRY):
-        return CONTEXT_CACHE["data"]
-
-    # Otherwise, fetch from Postgres
-    from db.models import Product, ProductCategory, TrainingProgramORM
-
-    with SessionLocal() as session:
-        products = (
-            session.query(Product)
-            .order_by(Product.created_at.desc())
-            .limit(30)
-            .all()
-        )
-        categories = (
-            session.query(ProductCategory)
-            .order_by(ProductCategory.display_order.asc())
-            .limit(15)
-            .all()
-        )
-        trainings = (
-            session.query(TrainingProgramORM)
-            .order_by(TrainingProgramORM.created_at.desc())
-            .limit(10)
-            .all()
-        )
-
-    p_list = "\n".join([f"- {p.name}" for p in products])
-    c_list = "\n".join([f"- {c.name}" for c in categories])
-    t_list = "\n".join([f"- {t.title}" for t in trainings])
-
-    context = f"CATEGORIES:\n{c_list}\n\nPRODUCTS:\n{p_list}\n\nTRAINING:\n{t_list}"
-
-    # Update cache
-    CONTEXT_CACHE["data"] = context
-    CONTEXT_CACHE["last_updated"] = current_time
-    return context
 
 @api_router.post("/chatbot/query")
 async def chatbot_query(query: dict):
-    user_message = query.get("message", "")
     session_id = query.get("session_id", "default")
-    frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3001')
-
-    try:
-        # Get fast cached context
-        business_context = await get_cached_system_context()
-
-        # High-density instruction
-        system_instruction = f"""
-Role: Professional Support for Hampton Scientific (Nairobi).
-{business_context}
-
-Links:
-- Contact: {frontend_url}/contact
-- Products: {frontend_url}/products
-
-Rules: 
-1. Link to [Products Page]({frontend_url}/products) for items. 
-2. If unlisted, suggest custom quotes via [Contact]({frontend_url}/contact).
-3. Be concise and professional.
-"""
-
-        past_messages = await get_chat_history(session_id)
-
-        chat = genai_client.chats.create(
-            model="gemini-2.5-flash",
-            config=types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.7
-            ),
-            history=past_messages
-        )
-
-        response = chat.send_message(user_message)
-        ai_message = response.text
-
-        # Background task: Save to Postgres chat history
-        from repositories import chat as chat_repo
-
-        with SessionLocal() as session:
-            chat_repo.append_chat_messages(
-                session,
-                session_id,
-                [
-                    {"role": "user", "content": user_message},
-                    {"role": "assistant", "content": ai_message},
-                ],
-            )
-
-        return {"message": ai_message, "session_id": session_id}
-
-    except Exception as e:
-        logger.error(f"Chatbot Error: {e}")
-        return {"message": "System busy. Please try again in a moment.", "session_id": session_id}
-
-# Get chat history helper
-async def get_chat_history(session_id, limit=3):
-    from repositories import chat as chat_repo
-
-    with SessionLocal() as session:
-        history = chat_repo.get_recent_messages(session, session_id, limit)
-    # they come newest-first; reverse to oldest-first
-    history.reverse()
-
-    formatted_history = []
-    for msg in history:
-        role = "model" if msg.role == "assistant" else "user"
-        # Truncate very long past messages to 200 characters to save tokens
-        content = (msg.content[:200] + "..") if len(msg.content) > 200 else msg.content
-
-        formatted_history.append(
-            types.Content(role=role, parts=[types.Part(text=content)])
-        )
-    return formatted_history
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3001")
+    return {
+        "message": (
+            "Our chatbot is currently unavailable. "
+            f"Please browse the catalogue or contact us at {frontend_url}/contact."
+        ),
+        "session_id": session_id,
+    }
 
 # ============================================
 # Health Check
@@ -334,12 +253,21 @@ async def health_check():
 # Serve uploaded product images
 PRODUCT_UPLOAD_DIR = ROOT_DIR / "routes" / "uploads" / "products"
 PRODUCT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+CHAT_UPLOAD_DIR = ROOT_DIR / "routes" / "uploads" / "chat"
+CHAT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+CAREER_UPLOAD_DIR = ROOT_DIR / "routes" / "uploads" / "careers"
+CAREER_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 from fastapi.staticfiles import StaticFiles
 
 app.mount(
     "/images/products",
     StaticFiles(directory=PRODUCT_UPLOAD_DIR),
     name="product-images",
+)
+app.mount(
+    "/files/chat",
+    StaticFiles(directory=CHAT_UPLOAD_DIR),
+    name="chat-files",
 )
 
 # Include the router in the main app
@@ -354,6 +282,18 @@ app.include_router(invoices.router, prefix="/api")
 app.include_router(training.router, prefix="/api/training")
 app.include_router(contact.router, prefix="/api")
 app.include_router(stats.router, prefix="/api/admin")
+app.include_router(facilities.router, prefix="/api/facilities")
+app.include_router(organizations.router, prefix="/api/organizations")
+app.include_router(branches.router, prefix="/api/branches")
+app.include_router(facility_users.router, prefix="/api/users")
+app.include_router(delivery_locations.router, prefix="/api/delivery-locations")
+app.include_router(orders.router, prefix="/api/orders")
+app.include_router(admin_ops.router, prefix="/api/admin")
+app.include_router(admin_facilities.router, prefix="/api/admin")
+app.include_router(field.router, prefix="/api/admin")
+app.include_router(events.router, prefix="/api")
+app.include_router(careers.public_router, prefix="/api/careers")
+app.include_router(careers.admin_router, prefix="/api/admin/careers")
 
 def _parse_cors_origins() -> List[str]:
     """Split CORS_ORIGINS; strip whitespace, optional wrapping quotes, trailing slashes."""
@@ -407,7 +347,6 @@ async def startup_scheduler():
 @app.on_event("shutdown")
 async def shutdown_db_client():
     scheduler.shutdown(wait=False)
-    genai_client.close()
 
 # ============================================
 # Background Email Follow-Up Scheduler
@@ -432,51 +371,51 @@ async def run_followup_checks():
         with SessionLocal() as session:
             settings = await get_followup_settings(session)
 
-        # Check quote follow-ups
-        if settings.get("quote_followup_enabled"):
-            hours = settings.get("quote_followup_hours", 24)
-            quotes = await get_quotes_needing_followup(session, hours)
-            for quote in quotes:
-                try:
-                    send_quote_followup_email(
-                        quote["contact_person"],
-                        quote["email"],
-                        quote["facility_name"],
-                        quote["id"],
-                        quote["items"]
-                    )
-                    await log_email(session, {
-                        "to": [quote["email"]],
-                        "subject": f"Quote Follow-Up - {quote['id'][:8].upper()}",
-                        "type": "quote_followup_auto",
-                        "related_id": quote["id"],
-                        "status": "sent"
-                    })
-                    await mark_quote_followup_sent(session, quote["id"])
-                    logger.info(f"Auto follow-up sent for quote {quote['id'][:8]}")
-                except Exception as e:
-                    logger.error(f"Failed auto follow-up for quote {quote['id'][:8]}: {e}")
+            # Check quote follow-ups
+            if settings.get("quote_followup_enabled"):
+                hours = settings.get("quote_followup_hours", 24)
+                quotes = await get_quotes_needing_followup(session, hours)
+                for quote in quotes:
+                    try:
+                        send_quote_followup_email(
+                            quote["contact_person"],
+                            quote["email"],
+                            quote["facility_name"],
+                            quote["id"],
+                            quote["items"]
+                        )
+                        await log_email(session, {
+                            "to": [quote["email"]],
+                            "subject": f"Quote Follow-Up - {quote['id'][:8].upper()}",
+                            "type": "quote_followup_auto",
+                            "related_id": quote["id"],
+                            "status": "sent"
+                        })
+                        await mark_quote_followup_sent(session, quote["id"])
+                        logger.info(f"Auto follow-up sent for quote {quote['id'][:8]}")
+                    except Exception as e:
+                        logger.error(f"Failed auto follow-up for quote {quote['id'][:8]}: {e}")
 
-        # Check invoice reminders
-        if settings.get("invoice_followup_enabled"):
-            days = settings.get("invoice_followup_days", 7)
-            invoices = await get_invoices_needing_reminder(session, days)
-            for inv in invoices:
-                try:
-                    due_date = inv.get("due_date")
-                    is_overdue = due_date < datetime.utcnow() if due_date else False
-                    send_invoice_reminder_email_from_template(inv, is_overdue=is_overdue)
-                    await log_email(session, {
-                        "to": [inv["email"]],
-                        "subject": f"Invoice Reminder - {inv['invoice_number']}",
-                        "type": "invoice_reminder_auto",
-                        "related_id": inv["id"],
-                        "status": "sent"
-                    })
-                    await mark_invoice_reminder_sent(session, inv["id"])
-                    logger.info(f"Auto reminder sent for invoice {inv['invoice_number']}")
-                except Exception as e:
-                    logger.error(f"Failed auto reminder for invoice {inv.get('invoice_number')}: {e}")
+            # Check invoice reminders
+            if settings.get("invoice_followup_enabled"):
+                days = settings.get("invoice_followup_days", 7)
+                invoices = await get_invoices_needing_reminder(session, days)
+                for inv in invoices:
+                    try:
+                        due_date = inv.get("due_date")
+                        is_overdue = due_date < datetime.utcnow() if due_date else False
+                        send_invoice_reminder_email_from_template(inv, is_overdue=is_overdue)
+                        await log_email(session, {
+                            "to": [inv["email"]],
+                            "subject": f"Invoice Reminder - {inv['invoice_number']}",
+                            "type": "invoice_reminder_auto",
+                            "related_id": inv["id"],
+                            "status": "sent"
+                        })
+                        await mark_invoice_reminder_sent(session, inv["id"])
+                        logger.info(f"Auto reminder sent for invoice {inv['invoice_number']}")
+                    except Exception as e:
+                        logger.error(f"Failed auto reminder for invoice {inv.get('invoice_number')}: {e}")
 
         logger.info("Follow-up check completed")
     except Exception as e:

@@ -5,25 +5,143 @@ Handles subtotal, discount, tax, and final total calculations.
 
 from typing import List, Dict, Tuple
 
+# Fallback only when a document has no stored tax_rate. Prefer SiteSettings / the document's tax_rate.
+DEFAULT_TAX_RATE = 16.0
 
-def calculate_subtotal(items: List[Dict]) -> float:
-    """Calculate subtotal from a list of items with unit_price and quantity.
-    
-    Args:
-        items: List of dicts with 'unit_price' and 'quantity' keys
-        
-    Returns:
-        Total sum of (unit_price * quantity) for all items
-    """
-    subtotal = 0
+
+def _item_quantity(item: Dict) -> int:
+    return int(item.get("quoted_quantity") or item.get("quantity") or 1)
+
+
+def calculate_list_subtotal(items: List[Dict]) -> float:
+    """Calculate subtotal from catalogue/list price snapshots."""
+    subtotal = 0.0
     for item in items:
-        price = float(item.get("unit_price", 0) or 0)
-        qty = int(item.get("quantity", 1))
-        subtotal += price * qty
+        price = float(item.get("list_price") or item.get("original_price") or 0)
+        subtotal += price * _item_quantity(item)
     return subtotal
 
 
-def calculate_tax(subtotal: float, discount: float = 0, tax_rate: float = 16) -> float:
+def calculate_subtotal(items: List[Dict]) -> float:
+    """Calculate quoted subtotal from unit_price (quoted/agreed price) and quantity."""
+    subtotal = 0.0
+    for item in items:
+        price = float(
+            item.get("unit_price")
+            or item.get("modified_price")
+            or item.get("agreed_unit_price")
+            or 0
+        )
+        subtotal += price * _item_quantity(item)
+    return subtotal
+
+
+def document_pricing(
+    items: List[Dict],
+    *,
+    tax_rate: float | None = None,
+    include_vat: bool = True,
+    delivery_charge: float = 0,
+) -> Dict:
+    """Canonical document totals.
+
+    Discount is always list subtotal minus quoted subtotal.
+    VAT is applied to the quoted subtotal (list minus discount).
+    Total is quoted subtotal + VAT + delivery — discount is not subtracted again.
+    """
+    list_subtotal = round(calculate_list_subtotal(items), 2)
+    quoted_subtotal = round(calculate_subtotal(items), 2)
+    discount_amount = round(max(0.0, list_subtotal - quoted_subtotal), 2) if quoted_subtotal > 0 else 0.0
+    if tax_rate is None:
+        rate = DEFAULT_TAX_RATE
+    else:
+        rate = float(tax_rate)
+    if include_vat and rate <= 0:
+        rate = DEFAULT_TAX_RATE
+    vat_on = quoted_subtotal if quoted_subtotal > 0 else 0.0
+    tax_amount = round(vat_on * (rate / 100.0), 2) if include_vat and rate > 0 else 0.0
+    delivery = float(delivery_charge or 0)
+    total = round(vat_on + tax_amount + delivery, 2)
+    return {
+        "list_subtotal": list_subtotal,
+        "quoted_subtotal": quoted_subtotal,
+        "subtotal": quoted_subtotal,
+        "display_subtotal": list_subtotal,
+        "discount_amount": discount_amount,
+        "tax_rate": rate,
+        "tax_amount": tax_amount,
+        "delivery_charge": delivery,
+        "include_vat": bool(include_vat),
+        "total": total,
+    }
+
+
+def overlay_document_pricing(payload: Dict, items=None) -> Dict:
+    pricing = document_pricing(
+        items_to_pricing_payload(items if items is not None else payload.get("items")),
+        tax_rate=payload.get("tax_rate"),
+        include_vat=payload.get("include_vat", True) is not False,
+        delivery_charge=payload.get("delivery_charge") or 0,
+    )
+    payload["list_subtotal"] = pricing["list_subtotal"]
+    payload["discount_amount"] = pricing["discount_amount"]
+    payload["subtotal"] = pricing["quoted_subtotal"]
+    payload["tax_rate"] = pricing["tax_rate"]
+    payload["tax_amount"] = pricing["tax_amount"]
+    payload["total"] = pricing["total"]
+    payload["net"] = round(max(0.0, pricing["total"] - pricing["tax_amount"]), 2)
+    payload["include_vat"] = pricing["include_vat"]
+    return payload
+
+
+def items_to_pricing_payload(items) -> List[Dict]:
+    payload = []
+    for item in items or []:
+        if isinstance(item, dict):
+            payload.append(
+                {
+                    "list_price": item.get("list_price")
+                    or item.get("original_price")
+                    or item.get("listPrice")
+                    or 0,
+                    "unit_price": item.get("unit_price")
+                    or item.get("modified_price")
+                    or item.get("agreed_unit_price")
+                    or item.get("quoted_unit_price")
+                    or 0,
+                    "quantity": item.get("quoted_quantity") or item.get("quantity") or 1,
+                }
+            )
+        else:
+            payload.append(
+                {
+                    "list_price": getattr(item, "list_price", None)
+                    or getattr(item, "original_price", None)
+                    or 0,
+                    "unit_price": getattr(item, "unit_price", None)
+                    or getattr(item, "modified_price", None)
+                    or getattr(item, "agreed_unit_price", None)
+                    or 0,
+                    "quantity": getattr(item, "quoted_quantity", None)
+                    or getattr(item, "quantity", None)
+                    or 1,
+                }
+            )
+    return payload
+
+
+def calculate_customer_savings(items: List[Dict]) -> float:
+    """Sum of (list_price - quoted_price) * qty where quoted is lower than list."""
+    savings = 0.0
+    for item in items:
+        list_price = float(item.get("list_price") or item.get("original_price") or 0)
+        quoted = float(item.get("unit_price") or item.get("modified_price") or 0)
+        if list_price > 0 and quoted > 0 and quoted < list_price:
+            savings += (list_price - quoted) * _item_quantity(item)
+    return savings
+
+
+def calculate_tax(subtotal: float, discount: float = 0, tax_rate: float = DEFAULT_TAX_RATE) -> float:
     """Calculate tax amount based on subtotal, discount, and tax rate.
     
     Args:
@@ -170,8 +288,7 @@ def validate_pricing(subtotal: float, discount: float, tax_rate: float) -> bool:
     if subtotal < 0:
         return False
     
-    # Discount cannot exceed subtotal
-    if discount > subtotal:
+    if discount < 0:
         return False
     
     # Tax rate should be between 0 and 100

@@ -48,9 +48,10 @@ def count_contact_inquiries(db: Session) -> int:
 def get_newsletter_by_email(
     db: Session, email: str
 ) -> Optional[NewsletterSubscription]:
+    normalized = (email or "").strip().lower()
     return (
         db.query(NewsletterSubscription)
-        .filter(NewsletterSubscription.email == email)
+        .filter(NewsletterSubscription.email == normalized)
         .one_or_none()
     )
 
@@ -60,7 +61,7 @@ def create_newsletter_subscription(
 ) -> NewsletterSubscription:
     sub = NewsletterSubscription(
         id=str(uuid4()),
-        email=email,
+        email=(email or "").strip().lower(),
         subscribed=True,
     )
     db.add(sub)
@@ -76,6 +77,16 @@ def resubscribe_newsletter(
 
     sub.subscribed = True
     sub.subscribed_at = datetime.utcnow()
+    db.add(sub)
+    db.commit()
+    db.refresh(sub)
+    return sub
+
+
+def unsubscribe_newsletter(
+    db: Session, sub: NewsletterSubscription
+) -> NewsletterSubscription:
+    sub.subscribed = False
     db.add(sub)
     db.commit()
     db.refresh(sub)

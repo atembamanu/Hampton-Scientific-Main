@@ -12,6 +12,7 @@ import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Textarea } from '../components/ui/textarea';
 import { API_URL } from '@/config/apiBaseUrl';
+import { emailError, phoneError, liveEmailError, livePhoneError, invalidFieldClass } from '../utils/validation';
 
 export const QuoteCart = () => {
   const { quoteItems, updateQuantity, updateNotes, removeFromQuote, clearQuote } = useQuote();
@@ -84,6 +85,10 @@ export const QuoteCart = () => {
       toast.error('Please fill in all required company information fields');
       return;
     }
+    const invalidEmail = emailError(companyInfo.email);
+    const invalidPhone = phoneError(companyInfo.phone);
+    if (invalidEmail) { toast.error(invalidEmail); return; }
+    if (invalidPhone) { toast.error(invalidPhone); return; }
 
     setIsSubmitting(true);
 
@@ -108,9 +113,13 @@ export const QuoteCart = () => {
       // Include auth header if logged in to link quote to user
       const headers = isAuthenticated ? getAuthHeader() : {};
       await axios.post(`${API_URL}/api/quotes`, quoteData, { headers });
-      
-      toast.success('Quote request submitted successfully! We will contact you shortly.');
-      clearQuote();
+
+      if (isAuthenticated) {
+        toast.success('Quote submitted! Track it anytime under Profile → Quote History.');
+      } else {
+        toast.success('Quote submitted! Sign in to track quotes and invoices in your profile.');
+      }
+      clearQuote({ silent: true });
       
       // Reset form
       setCompanyInfo({
@@ -122,8 +131,7 @@ export const QuoteCart = () => {
         additionalNotes: ''
       });
       
-      // Navigate to home or confirmation page
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => navigate(isAuthenticated ? '/profile' : '/', { state: isAuthenticated ? { section: 'quotes' } : undefined }), 1500);
       
     } catch (error) {
       console.error('Quote submission error:', error);
@@ -134,7 +142,7 @@ export const QuoteCart = () => {
   };
 
   return (
-    <div className="min-h-screen pt-36 lg:pt-40 pb-20 bg-gray-50">
+    <div className="min-h-screen pt-[88px] pb-20 bg-gray-50">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
@@ -146,6 +154,11 @@ export const QuoteCart = () => {
           <p className="text-base md:text-lg text-gray-600">
             Review your selected items and provide details for your quote request
           </p>
+          {quoteItems.some((item) => String(item.id).startsWith('history-')) && (
+            <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              Items were loaded from a previous order. Submitting creates a <strong>new quote</strong> — it does not change the original order.
+            </div>
+          )}
         </div>
 
         {quoteItems.length === 0 ? (
@@ -155,11 +168,20 @@ export const QuoteCart = () => {
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-2">Your quote is empty</h3>
             <p className="text-gray-600 mb-6">Add products from our catalog to request a quote</p>
-            <Link to="/products">
-              <Button className="bg-[#006332] hover:bg-[#005028] text-white" data-testid="browse-products-btn">
-                Browse Products
-              </Button>
-            </Link>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <Link to="/products">
+                <Button className="bg-[#006332] hover:bg-[#005028] text-white" data-testid="browse-products-btn">
+                  Browse Products
+                </Button>
+              </Link>
+              {isAuthenticated && (
+                <Link to="/profile">
+                  <Button variant="outline" className="border-[#006332] text-[#006332]">
+                    View Quote History
+                  </Button>
+                </Link>
+              )}
+            </div>
           </Card>
         ) : (
           <form onSubmit={handleSubmitQuote} className="space-y-8">
@@ -362,13 +384,15 @@ export const QuoteCart = () => {
                     <Input
                       id="email"
                       type="email"
+                      autoComplete="email"
                       placeholder="contact@facility.com"
                       value={companyInfo.email}
                       onChange={(e) => setCompanyInfo({ ...companyInfo, email: e.target.value })}
                       required
-                      className="h-12"
+                      className={invalidFieldClass(liveEmailError(companyInfo.email), 'h-12')}
                       data-testid="email-input"
                     />
+                    {liveEmailError(companyInfo.email) && <p className="text-xs text-red-600">{liveEmailError(companyInfo.email)}</p>}
                   </div>
 
                   <div className="space-y-2">
@@ -376,13 +400,16 @@ export const QuoteCart = () => {
                     <Input
                       id="phone"
                       type="tel"
+                      inputMode="tel"
+                      autoComplete="tel"
                       placeholder="+254 700 000 000"
                       value={companyInfo.phone}
                       onChange={(e) => setCompanyInfo({ ...companyInfo, phone: e.target.value })}
                       required
-                      className="h-12"
+                      className={invalidFieldClass(livePhoneError(companyInfo.phone), 'h-12')}
                       data-testid="phone-input"
                     />
+                    {livePhoneError(companyInfo.phone) && <p className="text-xs text-red-600">{livePhoneError(companyInfo.phone)}</p>}
                   </div>
 
                   <div className="space-y-2 md:col-span-2">

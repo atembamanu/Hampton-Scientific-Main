@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from repositories import email_config as email_repo
 from db.models import Quote, QuoteItem, Invoice, InvoiceItem
+from utils.ops_stats import OPEN_INVOICE_STATUSES
 
 logger = logging.getLogger(__name__)
 
@@ -144,7 +145,7 @@ async def get_invoices_needing_reminder(
     invoices = (
         db.query(Invoice)
         .filter(
-            Invoice.status.in_(["pending", "unpaid"]),
+            Invoice.status.in_(list(OPEN_INVOICE_STATUSES)),
             Invoice.due_date != None,  # noqa: E711
             Invoice.due_date <= reminder_date,
         )
@@ -202,122 +203,103 @@ async def mark_invoice_reminder_sent(db: Session, invoice_id: str) -> None:
     return None
 
 
-# Email template functions
+# Email template helpers — use shared modern shell
 def get_quote_followup_html(quote: dict, custom_message: str = None) -> str:
-    """Generate HTML for quote follow-up email"""
+    """Generate HTML for quote follow-up email (modern shell)."""
+    from utils.email_layout import (
+        e,
+        email_detail_card,
+        email_items_table,
+        first_name_only,
+        render_email,
+        BORDER,
+        INK,
+        MUTED,
+    )
+    from utils.email_service import _get_company_info_from_db, _company_signature_html
+
     facility_name = quote.get("facility_name", "Customer")
     contact_person = quote.get("contact_person", "")
-    quote_id = quote.get("id", "")[:8].upper()
-    
+    quote_id = (quote.get("id") or "")[:8].upper()
+    company_info = _get_company_info_from_db()
+
     items_html = ""
     total = 0
     for item in quote.get("items", []):
         price = item.get("unit_price", 0) or 0
         qty = item.get("quantity", 1)
-        line_total = price * qty
-        total += line_total
+        total += price * qty
         items_html += f"""
         <tr>
-            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0;">{item.get('product_name', '')}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; text-align: center;">{qty}</td>
-            <td style="padding: 8px; border-bottom: 1px solid #e0e0e0; text-align: right;">KES {price:,.0f}</td>
+            <td style="padding:12px; border-bottom:1px solid {BORDER}; color:{INK}; font-size:14px;">{e(item.get('product_name', ''))}</td>
+            <td style="padding:12px; border-bottom:1px solid {BORDER}; text-align:center; color:{MUTED}; font-size:14px;">{e(qty)}</td>
+            <td style="padding:12px; border-bottom:1px solid {BORDER}; text-align:right; color:{MUTED}; font-size:14px;">KES {price:,.0f}</td>
         </tr>
         """
-    
-    message = custom_message or "We wanted to follow up on the quotation we sent you. Please review the items below and let us know if you have any questions or would like to proceed with your order."
-    
-    return f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #006332 0%, #00a550 100%); padding: 30px 20px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">Hampton Scientific</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Medical Supplier & Trainer</p>
-        </div>
-        
-        <div style="padding: 30px; background: #ffffff;">
-            <h2 style="color: #006332; margin-bottom: 20px;">Quote Follow-Up</h2>
-            
-            <p>Dear {contact_person or facility_name},</p>
-            
-            <p>{message}</p>
-            
-            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <p style="margin: 0 0 10px 0;"><strong>Quote Reference:</strong> {quote_id}</p>
-                <p style="margin: 0 0 10px 0;"><strong>Facility:</strong> {facility_name}</p>
-            </div>
-            
-            <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
-                <thead>
-                    <tr style="background: #006332; color: white;">
-                        <th style="padding: 12px; text-align: left;">Product</th>
-                        <th style="padding: 12px; text-align: center;">Qty</th>
-                        <th style="padding: 12px; text-align: right;">Unit Price</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {items_html}
-                </tbody>
-                <tfoot>
-                    <tr style="background: #f0f0f0;">
-                        <td colspan="2" style="padding: 12px; text-align: right; font-weight: bold;">Total:</td>
-                        <td style="padding: 12px; text-align: right; font-weight: bold; color: #006332;">KES {total:,.0f}</td>
-                    </tr>
-                </tfoot>
-            </table>
-            
-            <p>To accept this quote or request any changes, please reply to this email or log in to your account.</p>
-            
-            <p style="margin-top: 30px;">Best regards,<br><strong>Hampton Scientific Team</strong></p>
-        </div>
-        
-        <div style="background: #1a1a1a; color: #888; padding: 20px; text-align: center; font-size: 12px;">
-            <p style="margin: 0;">Hampton Scientific Limited</p>
-            <p style="margin: 5px 0;">Phone: 0717 023 814 | Email: info@hamptonscientific.com</p>
-        </div>
-    </div>
-    """
+
+    message = custom_message or (
+        "We wanted to follow up on the quotation we sent you. Please review the items below and let us know "
+        "if you have any questions or would like to proceed with your order."
+    )
+
+    return render_email(
+        "Quote Follow-Up",
+        (
+            f'<p style="margin:0 0 14px 0;">Dear {e(first_name_only(contact_person or facility_name))},</p>'
+            f'<p style="margin:0 0 14px 0;">{e(message)}</p>'
+            + email_detail_card([
+                ("Quote reference", e(quote_id)),
+                ("Facility", e(facility_name)),
+            ])
+            + email_items_table(
+                items_html,
+                footer_label="Total",
+                footer_value=f"KES {total:,.0f}",
+                columns=[("Product", "left"), ("Qty", "center"), ("Unit Price", "right")],
+            )
+            + '<p style="margin:0 0 8px 0;">To accept this quote or request changes, reply to this email or log in to your account.</p>'
+            + _company_signature_html(company_info)
+        ),
+        eyebrow="Following up",
+        company_info=company_info,
+    )
 
 
 def get_invoice_reminder_html(invoice: dict, is_overdue: bool = False) -> str:
-    """Generate HTML for invoice reminder email"""
+    """Generate HTML for invoice reminder email (modern shell)."""
+    from utils.app_time import format_app
+    from utils.email_layout import e, email_detail_card, email_highlight, first_name_only, render_email, GREEN
+    from utils.email_service import _get_company_info_from_db, _company_signature_html
+
     facility_name = invoice.get("facility_name", "Customer")
     contact_person = invoice.get("contact_person", "")
     invoice_number = invoice.get("invoice_number", "")
-    total = invoice.get("total", 0)
+    total = invoice.get("total", 0) or 0
     due_date = invoice.get("due_date")
-    
-    due_date_str = due_date.strftime("%B %d, %Y") if due_date else "N/A"
-    
-    subject_line = "Invoice Overdue - Action Required" if is_overdue else "Invoice Reminder"
-    urgency_color = "#dc2626" if is_overdue else "#f59e0b"
-    
-    return f"""
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background: linear-gradient(135deg, #006332 0%, #00a550 100%); padding: 30px 20px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 24px;">Hampton Scientific</h1>
-            <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; font-size: 14px;">Medical Supplier & Trainer</p>
-        </div>
-        
-        <div style="padding: 30px; background: #ffffff;">
-            <h2 style="color: {urgency_color}; margin-bottom: 20px;">{subject_line}</h2>
-            
-            <p>Dear {contact_person or facility_name},</p>
-            
-            {"<p style='color: #dc2626;'><strong>This invoice is now overdue. Please arrange payment as soon as possible to avoid any service interruptions.</strong></p>" if is_overdue else "<p>This is a friendly reminder about your upcoming invoice payment.</p>"}
-            
-            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid {urgency_color};">
-                <p style="margin: 0 0 10px 0;"><strong>Invoice Number:</strong> {invoice_number}</p>
-                <p style="margin: 0 0 10px 0;"><strong>Amount Due:</strong> <span style="font-size: 1.2em; color: #006332;">KES {total:,.0f}</span></p>
-                <p style="margin: 0;"><strong>Due Date:</strong> <span style="color: {urgency_color};">{due_date_str}</span></p>
-            </div>
-            
-            <p>If you have already made this payment, please disregard this reminder. For any questions regarding this invoice, please contact us.</p>
-            
-            <p style="margin-top: 30px;">Best regards,<br><strong>Hampton Scientific Team</strong></p>
-        </div>
-        
-        <div style="background: #1a1a1a; color: #888; padding: 20px; text-align: center; font-size: 12px;">
-            <p style="margin: 0;">Hampton Scientific Limited</p>
-            <p style="margin: 5px 0;">Phone: 0717 023 814 | Email: info@hamptonscientific.com</p>
-        </div>
-    </div>
-    """
+    due_date_str = format_app(due_date, "%B %d, %Y", default="N/A") if due_date else "N/A"
+    company_info = _get_company_info_from_db()
+
+    subject_line = "Invoice Overdue — Action Required" if is_overdue else "Invoice Reminder"
+    intro = (
+        "<strong>This invoice is now overdue.</strong> Please arrange payment as soon as possible."
+        if is_overdue
+        else "This is a friendly reminder about your upcoming invoice payment."
+    )
+
+    return render_email(
+        subject_line,
+        (
+            f'<p style="margin:0 0 14px 0;">Dear {e(first_name_only(contact_person or facility_name))},</p>'
+            + email_highlight(intro, tone="red" if is_overdue else "amber")
+            + email_detail_card([
+                ("Invoice number", e(invoice_number)),
+                ("Amount due", f"KES {float(total):,.0f}"),
+                ("Due date", e(due_date_str)),
+                ("Facility", e(facility_name)),
+            ], accent="#c4704a" if is_overdue else GREEN)
+            + '<p style="margin:0 0 8px 0;">If you have already made this payment, please disregard this reminder.</p>'
+            + _company_signature_html(company_info)
+        ),
+        eyebrow="Payment reminder",
+        company_info=company_info,
+    )

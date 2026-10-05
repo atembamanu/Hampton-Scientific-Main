@@ -1,0 +1,122 @@
+{
+  "source": "https://microbiology.co.ke/",
+  "categories": [
+    {
+      "category_id": "haematology",
+      "name": "Haematology",
+      "slug": "haematology",
+      "url": "https://microbiology.co.ke/product-category/haematology/",
+      "parent_id": null,
+      "display_order": 1,
+      "description": "Haematology analyzers, reagents, controls, and haemoglobin meters."
+    },
+    {
+      "category_id": "haematology-analyzers",
+      "name": "Haematology Analyzers",
+      "slug": "haematology-analyzers",
+      "url": "https://microbiology.co.ke/product-category/haematology-analyzers/",
+      "parent_id": "haematology",
+      "display_order": 1,
+      "description": ""
+    },
+    {
+      "category_id": "haematology-reagents",
+      "name": "Haematology Reagents",
+      "slug": "haematology-reagents",
+      "url": "https://microbiology.co.ke/product-category/haematology-reagents/",
+      "parent_id": "haematology",
+      "display_order": 2,
+      "description": ""
+    },
+    {
+      "category_id": "haematology-controls-calibrators",
+      "name": "Haematology Controls & Calibrators",
+      "slug": "haematology-controls-calibrators",
+      "url": "https://microbiology.co.ke/product-category/haematology-controls-calibrators/",
+      "parent_id": "haematology",
+      "display_order": 3,
+      "description": ""
+    },
+    {
+      "category_id": "haemoglobin-meters",
+      "name": "Haemoglobin Meters",
+      "slug": "haemoglobin-meters",
+      "url": "https://microbiology.co.ke/product-category/haemoglobin-meters/",
+      "parent_id": "haematology",
+      "display_order": 4,
+      "description": ""
+    },
+    {
+      "category_id": "clinical-chemistry",
+      "name": "Clinical Chemistry",
+      "slug": "clinical-chemistry",
+      "url": "https://microbiology.co.ke/product-category/clinical-chemistry/",
+      "parent_id": null,
+      "display_order": 2,
+      "description": "Clinical chemistry analyzers including Core, Alcor, ST-200 Aqua, Clinipak Semi and Mini-Bio."
+    },
+    {
+      "category_id": "immunoassay",
+      "name": "Immunoassay",
+      "slug": "immunoassay",
+      "url": "https://microbiology.co.ke/product-category/immunoassay/",
+      "parent_id": null,
+      "display_order": 3,
+      "description": "POCT immunofluorescence analyzers and I-Chroma reagents."
+    },
+    {
+      "category_id": "i-chroma-reagents",
+      "name": "I-Chroma Reagents",
+      "slug": "i-chroma-reagents",
+      "url": "https://microbiology.co.ke/product-category/i-chroma-reagents/",
+      "parent_id": "immunoassay",
+      "display_order": 1,
+      "description": "Biomarker reagent panels for I-Chroma readers."
+    },
+    {
+      "category_id": "critical-care",
+      "name": "Critical Care",
+      "slug": "critical-care",
+      "url": "https://microbiology.co.ke/product-category/critical-care/",
+      "parent_id": null,
+      "display_order": 4,
+      "description": "Edan i15 blood gas analyzer and consumables."
+    },
+    {
+      "category_id": "rapid-test-strips",
+      "name": "Rapid Test Strips",
+      "slug": "rapid-test-strips",
+      "url": "https://microbiology.co.ke/product-category/rapid-test-strips/",
+      "parent_id": null,
+      "display_order": 5,
+      "description": ""
+    },
+    {
+      "category_id": "blood-sugar-testing",
+      "name": "Blood Sugar Testing",
+      "slug": "blood-sugar-testing",
+      "url": "https://microbiology.co.ke/product-category/blood-sugar-testing/",
+      "parent_id": null,
+      "display_order": 6,
+      "description": ""
+    },
+    {
+      "category_id": "specimen-collections",
+      "name": "Specimen Collections",
+      "slug": "specimen-collections",
+      "url": "https://microbiology.co.ke/product-category/specimen-collections/",
+      "parent_id": null,
+      "display_order": 7,
+      "description": ""
+    },
+    {
+      "category_id": "general-laboratory-equipments",
+      "name": "General Laboratory Equipments",
+      "slug": "general-laboratory-equipments",
+      "url": "https://microbiology.co.ke/product-category/general-laboratory-equipments/",
+      "parent_id": null,
+      "display_order": 8,
+      "description": ""
+    }
+  ]
+}

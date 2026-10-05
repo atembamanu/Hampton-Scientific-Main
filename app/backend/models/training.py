@@ -1,9 +1,12 @@
 from pydantic import BaseModel, EmailStr, Field
+from models.base import AppModel
+
+from utils.contact_validation import PhoneStr
 from typing import Optional, List
 from datetime import datetime
 import uuid
 
-class TrainingProgram(BaseModel):
+class TrainingProgram(AppModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     program_id: str
     title: str
@@ -12,7 +15,7 @@ class TrainingProgram(BaseModel):
     topics: List[str]
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
-class TrainingRegistration(BaseModel):
+class TrainingRegistration(AppModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     user_id: Optional[str] = None
     facility_name: str
@@ -31,7 +34,7 @@ class TrainingRegistrationCreate(BaseModel):
     facility_name: str
     contact_person: str
     email: EmailStr
-    phone: str
+    phone: PhoneStr
     training_type: str
     number_of_participants: int
     preferred_date: Optional[str] = None

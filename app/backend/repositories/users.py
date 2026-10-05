@@ -24,6 +24,26 @@ def list_users(db: Session, skip: int = 0, limit: int = 50) -> Sequence[User]:
     )
 
 
+COMPANY_STAFF_ROLES = ("admin", "operations", "sales")
+
+
+def list_company_staff(db: Session) -> Sequence[User]:
+    return (
+        db.query(User)
+        .filter(User.role.in_(COMPANY_STAFF_ROLES), User.organization_id.is_(None))
+        .order_by(User.created_at.desc())
+        .all()
+    )
+
+
+def count_company_admins(db: Session) -> int:
+    return (
+        db.query(User)
+        .filter(User.role == "admin", User.organization_id.is_(None), User.can_login.is_(True))
+        .count()
+    )
+
+
 def count_users(db: Session) -> int:
     return db.query(User).count()
 

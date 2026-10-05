@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
+import { useConfirm } from "../components/ConfirmProvider";
 import {
   Card,
   CardContent,
@@ -43,6 +44,7 @@ import {
   Trash2,
   Send,
   Receipt,
+  Truck,
   UserPlus,
   X,
   LogOut,
@@ -62,6 +64,9 @@ import {
 import { toast } from "sonner";
 import axios from "axios";
 import { getFullImageUrl, API_URL } from "../utils/imageHelper";
+import { emailError, phoneError, liveEmailError, livePhoneError, invalidFieldClass } from "../utils/validation";
+import { SheetTabs } from "../components/ui/SheetTabs";
+import { SettingsSiteInfo, SettingsPaymentInfo, SettingsEmailFollowUps, SettingsEmailLogs } from "./admin/AdminSettingsPanels";
 
 // ======== Slide-Out Panel Component ========
 const SlideOutPanel = ({
@@ -75,9 +80,9 @@ const SlideOutPanel = ({
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-ink/50" onClick={onClose} />
       <div
-        className={`relative ${width} min-w-[400px] max-w-[700px] h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300`}
+        className={`relative h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300 w-full max-w-full min-w-0 sm:max-w-[700px] sm:min-w-[400px] ${width === 'w-[50vw]' ? 'sm:w-[50vw]' : 'sm:w-[40vw]'}`}
       >
         <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
           <div>
@@ -113,8 +118,9 @@ const NAV_ITEMS = [
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
-export const AdminDashboard = () => {
+export const AdminDashboard = ({ embedded = false, initialTab = 'overview' }) => {
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [adminUser, setAdminUser] = useState(null);
   const [adminToken, setAdminToken] = useState(null);
   const [stats, setStats] = useState(null);
@@ -124,7 +130,7 @@ export const AdminDashboard = () => {
   const [categories, setCategories] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   // Date range filter
   const [dateRange, setDateRange] = useState("all");
@@ -188,6 +194,7 @@ export const AdminDashboard = () => {
   const [newProduct, setNewProduct] = useState({
     name: "",
     price: "",
+    buying_price: "",
     package: "",
     stocking_unit: "",
     category_id: "",
@@ -219,6 +226,8 @@ export const AdminDashboard = () => {
     default_invoice_due_days: 14,
     default_tax_rate: 16,
     default_include_vat: true,
+    impact_stats: [],
+    partners: [],
   });
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSubTab, setSettingsSubTab] = useState("site-info");
@@ -231,7 +240,7 @@ export const AdminDashboard = () => {
   });
   const [followUpLoading, setFollowUpLoading] = useState(false);
   const [emailLogs, setEmailLogs] = useState([]);
-  const [showEmailLogs, setShowEmailLogs] = useState(false);
+  const [emailLogsLoading, setEmailLogsLoading] = useState(false);
 
   const [quoteFormData, setQuoteFormData] = useState({
     user_id: "",
@@ -247,7 +256,11 @@ export const AdminDashboard = () => {
         product_name: "",
         category: "",
         quantity: 1,
+        list_price: 0,
+        buying_price: 0,
         unit_price: 0,
+        notes: "",
+        admin_notes: "",
       },
     ],
     discount_amount: 0,
@@ -270,6 +283,10 @@ export const AdminDashboard = () => {
     toast.success("Logged out successfully");
     navigate("/sysadmin");
   };
+
+  useEffect(() => {
+    if (initialTab) setActiveTab(initialTab);
+  }, [initialTab]);
 
   useEffect(() => {
     const token = localStorage.getItem("admin_token");
@@ -339,13 +356,13 @@ export const AdminDashboard = () => {
         invoicesRes,
         emailSettingsRes,
       ] = await Promise.all([
-        axios.get(`${API_URL}/api/admin/stats`, { headers }),
-        axios.get(`${API_URL}/api/admin/quotes?limit=100`, { headers }),
-        axios.get(`${API_URL}/api/admin/users?limit=100`, { headers }),
-        axios.get(`${API_URL}/api/products`),
+        axios.get(`${API_URL}/api/admin/stats`, { headers }).catch(() => ({ data: {} })),
+        axios.get(`${API_URL}/api/admin/quotes?limit=100`, { headers }).catch(() => ({ data: { quotes: [] } })),
+        axios.get(`${API_URL}/api/admin/users?limit=100`, { headers }).catch(() => ({ data: { users: [] } })),
+        axios.get(`${API_URL}/api/admin/products`, { headers }),
         axios.get(`${API_URL}/api/products/categories`),
         axios.get(`${API_URL}/api/settings`),
-        axios.get(`${API_URL}/api/admin/invoices?limit=100`, { headers }),
+        axios.get(`${API_URL}/api/admin/invoices?limit=100`, { headers }).catch(() => ({ data: { invoices: [] } })),
         axios
           .get(`${API_URL}/api/admin/email-settings`, { headers })
           .catch(() => ({ data: {} })),
@@ -401,6 +418,10 @@ export const AdminDashboard = () => {
 
   // ======== CRUD Handlers ========
   const handleSaveSettings = async () => {
+    const invalidEmail = emailError(siteSettings.email);
+    const invalidPhone = phoneError(siteSettings.phone);
+    if (invalidEmail) { toast.error(invalidEmail); return; }
+    if (invalidPhone) { toast.error(invalidPhone); return; }
     setSettingsLoading(true);
     try {
       await axios.put(`${API_URL}/api/admin/settings`, siteSettings, {
@@ -427,16 +448,22 @@ export const AdminDashboard = () => {
     }
   };
   const handleFetchEmailLogs = async () => {
+    setEmailLogsLoading(true);
     try {
       const res = await axios.get(`${API_URL}/api/admin/email-logs?limit=50`, {
         headers: getAuthHeader(),
       });
       setEmailLogs(res.data.logs || []);
-      setShowEmailLogs(true);
     } catch (e) {
       toast.error("Failed to load email logs");
+    } finally {
+      setEmailLogsLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (settingsSubTab === "email-logs") handleFetchEmailLogs();
+  }, [settingsSubTab]);
 
   const updateQuoteStatus = async (quoteId, newStatus) => {
     try {
@@ -456,6 +483,10 @@ export const AdminDashboard = () => {
 
   const handleAddUser = async (e) => {
     e.preventDefault();
+    const invalidEmail = emailError(newUser.email);
+    const invalidPhone = phoneError(newUser.phone);
+    if (invalidEmail) { toast.error(invalidEmail); return; }
+    if (invalidPhone) { toast.error(invalidPhone); return; }
     try {
       const res = await axios.post(`${API_URL}/api/admin/users`, newUser, {
         headers: getAuthHeader(),
@@ -483,7 +514,14 @@ export const AdminDashboard = () => {
   };
 
   const handleDeleteUser = async (userId) => {
-    if (!window.confirm("Delete this user?")) return;
+    const approved = await confirm({
+      label: 'Delete user',
+      title: 'Delete this user?',
+      description: 'Their login will be removed. Documents already created in their name are kept.',
+      confirmLabel: 'Delete user',
+      tone: 'danger',
+    });
+    if (!approved) return;
     try {
       await axios.delete(`${API_URL}/api/admin/users/${userId}`, {
         headers: getAuthHeader(),
@@ -548,6 +586,7 @@ export const AdminDashboard = () => {
         formData.append("name", newProduct.name);
         formData.append("category_id", newProduct.category_id);
         formData.append("price", parseFloat(newProduct.price) || 0);
+        formData.append("buying_price", parseFloat(newProduct.buying_price) || 0);
         formData.append("package", newProduct.package || "");
         formData.append("stocking_unit", newProduct.stocking_unit || "");
         formData.append("description", newProduct.description || "");
@@ -567,7 +606,11 @@ export const AdminDashboard = () => {
       } else {
         response = await axios.post(
           `${API_URL}/api/admin/products`,
-          { ...newProduct, price: parseFloat(newProduct.price) || 0 },
+          {
+            ...newProduct,
+            price: parseFloat(newProduct.price) || 0,
+            buying_price: parseFloat(newProduct.buying_price) || 0,
+          },
           { headers: getAuthHeader() },
         );
       }
@@ -579,6 +622,7 @@ export const AdminDashboard = () => {
       setNewProduct({
         name: "",
         price: "",
+        buying_price: "",
         package: "",
         stocking_unit: "",
         category_id: "",
@@ -618,6 +662,7 @@ export const AdminDashboard = () => {
         ...panelData,
         image_url: finalImageUrl,
         price: parseFloat(panelData.price) || 0,
+        buying_price: parseFloat(panelData.buying_price) || 0,
       };
       await axios.put(
         `${API_URL}/api/admin/products/${panelData.product_id}`,
@@ -640,7 +685,14 @@ export const AdminDashboard = () => {
   };
 
   const handleDeleteProduct = async (productId) => {
-    if (!window.confirm("Delete this product?")) return;
+    const approved = await confirm({
+      label: 'Delete product',
+      title: 'Delete this product?',
+      description: 'This removes the product from the catalogue. Quotes that already include it are not changed.',
+      confirmLabel: 'Delete product',
+      tone: 'danger',
+    });
+    if (!approved) return;
     try {
       await axios.delete(`${API_URL}/api/admin/products/${productId}`, {
         headers: getAuthHeader(),
@@ -691,7 +743,14 @@ export const AdminDashboard = () => {
   };
 
   const handleDeleteCategory = async (categoryId) => {
-    if (!window.confirm("Delete this category?")) return;
+    const approved = await confirm({
+      label: 'Delete category',
+      title: 'Delete this category?',
+      description: 'This removes the category from the catalogue. Delete or move its products first if the catalogue still uses them.',
+      confirmLabel: 'Delete category',
+      tone: 'danger',
+    });
+    if (!approved) return;
     try {
       await axios.delete(`${API_URL}/api/admin/categories/${categoryId}`, {
         headers: getAuthHeader(),
@@ -888,6 +947,7 @@ export const AdminDashboard = () => {
           quantity: 1,
           original_price: product.price || 0,
           modified_price: product.price || 0,
+          buying_price: product.buying_price || 0,
           customer_proposed_price: 0,
           discount_percent: 0,
           notes: "",
@@ -909,6 +969,10 @@ export const AdminDashboard = () => {
       toast.error("Please fill in all required customer fields");
       return;
     }
+    const invalidEmail = emailError(quoteFormData.email);
+    const invalidPhone = phoneError(quoteFormData.phone);
+    if (invalidEmail) { toast.error(invalidEmail); return; }
+    if (invalidPhone) { toast.error(invalidPhone); return; }
 
     if (
       quoteFormData.items.length === 0 ||
@@ -1011,6 +1075,10 @@ export const AdminDashboard = () => {
       toast.error("Please fill in all required customer fields");
       return;
     }
+    const invalidEmail = emailError(quoteFormData.email);
+    const invalidPhone = phoneError(quoteFormData.phone);
+    if (invalidEmail) { toast.error(invalidEmail); return; }
+    if (invalidPhone) { toast.error(invalidPhone); return; }
     if (
       quoteFormData.items.length === 0 ||
       quoteFormData.items.some((i) => !i.product_id || i.quantity < 1)
@@ -1035,11 +1103,12 @@ export const AdminDashboard = () => {
           product_name: item.product_name,
           category: item.category,
           quantity: item.quantity,
-          original_price: parseFloat(item.unit_price) || 0,
+          original_price: parseFloat(item.list_price) || 0,
           modified_price: parseFloat(item.unit_price) || 0,
+          buying_price: parseFloat(item.buying_price) || 0,
           customer_proposed_price: 0,
           discount_percent: 0,
-          notes: item.notes || "",
+          notes: item.admin_notes || item.notes || "",
         })),
         discount_amount: parseFloat(quoteFormData.discount_amount) || 0,
         tax_rate: parseFloat(quoteFormData.tax_rate) || 16,
@@ -1153,15 +1222,18 @@ export const AdminDashboard = () => {
   };
 
   if (loading || !adminUser)
-    return (
+    return embedded ? (
+      <p className="text-sm text-ink-muted">Loading settings…</p>
+    ) : (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <Loader2 className="w-12 h-12 animate-spin text-[#00a550]" />
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex" data-testid="admin-dashboard">
+    <div className={`${embedded ? "bg-transparent" : "min-h-screen bg-gray-50 flex"}`} data-testid="admin-dashboard">
       {/* Left Sidebar */}
+      {!embedded && (
       <aside
         className="w-[240px] bg-gray-900 text-white flex flex-col fixed h-screen z-30"
         data-testid="admin-sidebar"
@@ -1211,10 +1283,12 @@ export const AdminDashboard = () => {
           </Button>
         </div>
       </aside>
+      )}
 
       {/* Main Content */}
-      <main className="ml-[240px] flex-1 min-h-screen">
+      <main className={`${embedded ? "" : "ml-[240px]"} flex-1 min-h-screen`}>
         {/* Top Bar */}
+        {!embedded && (
         <div className="sticky top-0 z-20 bg-white border-b px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">
@@ -1231,8 +1305,9 @@ export const AdminDashboard = () => {
             <RefreshCw className="w-4 h-4" /> Refresh
           </Button>
         </div>
+        )}
 
-        <div className="p-6">
+        <div className={embedded ? "" : "p-6"}>
           {/* ======== OVERVIEW ======== */}
           {activeTab === "overview" && stats && (
             <div className="space-y-6">
@@ -1627,6 +1702,7 @@ export const AdminDashboard = () => {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All Status</SelectItem>
+                      <SelectItem value="pending">Quote Requests</SelectItem>
                       <SelectItem value="quoted">Quoted</SelectItem>
                       <SelectItem value="invoiced">Invoiced</SelectItem>
                     </SelectContent>
@@ -1691,7 +1767,7 @@ export const AdminDashboard = () => {
                         Quote Ref
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                        Client
+                        Facility
                       </th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                         Contact
@@ -1732,6 +1808,7 @@ export const AdminDashboard = () => {
                             </div>
                             <div className="text-xs text-gray-500">
                               {quote.items?.length || 0} items
+                              {!quote.user_id && !quote.organization_id ? ' · Guest request' : ''}
                             </div>
                           </td>
                           <td className="px-4 py-3">
@@ -1813,7 +1890,11 @@ export const AdminDashboard = () => {
                                       product_name: it.product_name || "",
                                       category: it.category || "",
                                       quantity: it.quantity || 1,
+                                      list_price: it.list_price || 0,
+                                      buying_price: it.buying_price || 0,
                                       unit_price: it.unit_price || 0,
+                                      notes: it.notes || "",
+                                      admin_notes: it.admin_notes || "",
                                     })),
                                     discount_amount: quote.discount_amount || 0,
                                     tax_rate:
@@ -1909,7 +1990,7 @@ export const AdminDashboard = () => {
                           Invoice #
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
-                          Client
+                          Facility
                         </th>
                         <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                           Total
@@ -1967,7 +2048,7 @@ export const AdminDashboard = () => {
                                   try {
                                     // Backend download endpoint expects invoice_number in the path
                                     const r = await axios.get(
-                                      `${API_URL}/api/admin/invoices/${inv.invoice_number}/download`,
+                                      `${API_URL}/api/admin/invoices/${inv.id}/download`,
                                       {
                                         headers: getAuthHeader(),
                                         responseType: "blob",
@@ -1992,6 +2073,39 @@ export const AdminDashboard = () => {
                                 className="gap-1"
                               >
                                 <Download className="w-3 h-3" /> PDF
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                data-testid={`download-delivery-note-${inv.id}`}
+                                onClick={async () => {
+                                  try {
+                                    const r = await axios.get(
+                                      `${API_URL}/api/admin/invoices/${inv.id}/delivery-note`,
+                                      {
+                                        headers: getAuthHeader(),
+                                        responseType: "blob",
+                                      },
+                                    );
+                                    const u = window.URL.createObjectURL(
+                                      new Blob([r.data]),
+                                    );
+                                    const l = document.createElement("a");
+                                    l.href = u;
+                                    l.setAttribute(
+                                      "download",
+                                      `DeliveryNote_${inv.invoice_number}.pdf`,
+                                    );
+                                    document.body.appendChild(l);
+                                    l.click();
+                                    l.remove();
+                                  } catch (e) {
+                                    toast.error("Failed to download delivery note");
+                                  }
+                                }}
+                                className="gap-1"
+                              >
+                                <Truck className="w-3 h-3" /> Delivery Note
                               </Button>
                               <Button
                                 size="sm"
@@ -2282,6 +2396,7 @@ export const AdminDashboard = () => {
                       setNewProduct({
                         name: "",
                         price: "",
+                        buying_price: "",
                         package: "",
                         stocking_unit: "",
                         category_id: "",
@@ -2318,6 +2433,7 @@ export const AdminDashboard = () => {
                           setNewProduct({
                             name: "",
                             price: "",
+                            buying_price: "",
                             package: "",
                             stocking_unit: "",
                             category_id: "",
@@ -2358,7 +2474,8 @@ export const AdminDashboard = () => {
                         <th className="text-left p-3">Product</th>
                         <th className="text-left p-3">Package</th>
                         <th className="text-left p-3">Unit</th>
-                        <th className="text-right p-3">Price</th>
+                        <th className="text-right p-3">Buying</th>
+                        <th className="text-right p-3">Selling</th>
                         <th className="text-center p-3">Stock</th>
                         <th className="text-right p-3">Actions</th>
                       </tr>
@@ -2393,7 +2510,10 @@ export const AdminDashboard = () => {
                           <td className="p-3 text-gray-600">
                             {p.stocking_unit || p.unit || "-"}
                           </td>
-                          <td className="p-3 text-right">
+                          <td className="p-3 text-right text-amber-700">
+                            {(p.buying_price || 0).toLocaleString()}
+                          </td>
+                          <td className="p-3 text-right font-medium">
                             {(p.price || 0).toLocaleString()}
                           </td>
                           <td className="p-3 text-center">
@@ -2410,7 +2530,7 @@ export const AdminDashboard = () => {
                                 size="sm"
                                 onClick={() => {
                                   resetImageStates();
-                                  setPanelData({ ...p });
+                                  setPanelData({ ...p, buying_price: p.buying_price || 0 });
                                   setPanelType("edit-product");
                                 }}
                               >
@@ -2553,36 +2673,19 @@ export const AdminDashboard = () => {
           {/* ======== SETTINGS ======== */}
           {activeTab === "settings" && (
             <div>
-              <div
-                className="flex gap-1 mb-6 bg-gray-100 p-1 rounded-lg w-fit"
-                data-testid="settings-sub-tabs"
-              >
-                {[
-                  {
-                    id: "site-info",
-                    label: "Site Info",
-                    icon: <Settings className="w-4 h-4" />,
-                  },
-                  {
-                    id: "payment-info",
-                    label: "Payment Info",
-                    icon: <DollarSign className="w-4 h-4" />,
-                  },
-                  {
-                    id: "email-followups",
-                    label: "Email Follow-Ups",
-                    icon: <Send className="w-4 h-4" />,
-                  },
-                ].map((tab) => (
-                  <button
-                    key={tab.id}
-                    data-testid={`settings-tab-${tab.id}`}
-                    onClick={() => setSettingsSubTab(tab.id)}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${settingsSubTab === tab.id ? "bg-white text-[#006332] shadow-sm" : "text-gray-500 hover:text-gray-700"}`}
-                  >
-                    {tab.icon} {tab.label}
-                  </button>
-                ))}
+              <p className="editorial-label mb-2">Administration</p>
+              <h1 className="app-page-title mb-6">Settings</h1>
+              <div className="mb-6" data-testid="settings-sub-tabs">
+                <SheetTabs
+                  tabs={[
+                    { id: "site-info", label: "Site Info" },
+                    { id: "payment-info", label: "Payment Info" },
+                    { id: "email-followups", label: "Email Follow-Ups" },
+                    { id: "email-logs", label: "Email logs" },
+                  ]}
+                  value={settingsSubTab}
+                  onChange={setSettingsSubTab}
+                />
               </div>
               {settingsSubTab === "site-info" && (
                 <SettingsSiteInfo
@@ -2606,10 +2709,13 @@ export const AdminDashboard = () => {
                   setSettings={setFollowUpSettings}
                   onSave={handleSaveFollowUpSettings}
                   loading={followUpLoading}
-                  onViewLogs={handleFetchEmailLogs}
-                  emailLogs={emailLogs}
-                  showLogs={showEmailLogs}
-                  setShowLogs={setShowEmailLogs}
+                />
+              )}
+              {settingsSubTab === "email-logs" && (
+                <SettingsEmailLogs
+                  logs={emailLogs}
+                  loading={emailLogsLoading}
+                  onRefresh={handleFetchEmailLogs}
                 />
               )}
             </div>
@@ -2679,6 +2785,14 @@ export const AdminDashboard = () => {
                   {new Date(panelData.created_at).toLocaleDateString()}
                 </p>
               </div>
+              {panelData.quoted_at && (
+                <div>
+                  <p className="text-gray-500">Quoted at</p>
+                  <p className="font-medium">
+                    {new Date(panelData.quoted_at).toLocaleString()}
+                  </p>
+                </div>
+              )}
             </div>
             {/* Status is now controlled implicitly (Quoted / Invoiced) via pricing and invoice actions */}
             <div>
@@ -2688,7 +2802,9 @@ export const AdminDashboard = () => {
                   <tr className="bg-gray-100">
                     <th className="text-left p-2">Product</th>
                     <th className="text-center p-2">Qty</th>
-                    <th className="text-right p-2">Price</th>
+                    <th className="text-right p-2">Buying</th>
+                    <th className="text-right p-2">List Price</th>
+                    <th className="text-right p-2">Quoted Price</th>
                     {panelData.items?.some(
                       (i) => i.customer_proposed_price,
                     ) && <th className="text-right p-2">Customer Price</th>}
@@ -2700,11 +2816,21 @@ export const AdminDashboard = () => {
                     <tr key={i} className="border-b">
                       <td className="p-2">{item.product_name}</td>
                       <td className="p-2 text-center">{item.quantity}</td>
+                      <td className="p-2 text-right text-amber-700">
+                        {item.buying_price
+                          ? `KES ${item.buying_price.toLocaleString()}`
+                          : <span className="text-gray-400">—</span>}
+                      </td>
+                      <td className="p-2 text-right text-gray-600">
+                        {item.list_price
+                          ? `KES ${item.list_price.toLocaleString()}`
+                          : <span className="text-gray-400">—</span>}
+                      </td>
                       <td className="p-2 text-right">
                         {item.unit_price ? (
-                          `KES ${item.unit_price.toLocaleString()}`
+                          <span className="font-semibold text-[#006332]">KES {item.unit_price.toLocaleString()}</span>
                         ) : (
-                          <span className="text-gray-400">Not set</span>
+                          <span className="text-gray-400">Not quoted</span>
                         )}
                       </td>
                       {panelData.items?.some(
@@ -2743,8 +2869,8 @@ export const AdminDashboard = () => {
                     const spanCols = panelData.items?.some(
                       (i) => i.customer_proposed_price,
                     )
-                      ? 4
-                      : 3;
+                      ? 5
+                      : 4;
                     return (
                       <>
                         <tr>
@@ -2932,22 +3058,30 @@ export const AdminDashboard = () => {
               <Label>Email *</Label>
               <Input
                 type="email"
+                autoComplete="email"
                 value={newUser.email}
                 onChange={(e) =>
                   setNewUser({ ...newUser, email: e.target.value })
                 }
+                className={invalidFieldClass(liveEmailError(newUser.email))}
                 required
               />
+              {liveEmailError(newUser.email) && <p className="text-xs text-red-600 mt-1">{liveEmailError(newUser.email)}</p>}
             </div>
             <div>
               <Label>Phone *</Label>
               <Input
+                type="tel"
+                inputMode="tel"
+                autoComplete="tel"
                 value={newUser.phone}
                 onChange={(e) =>
                   setNewUser({ ...newUser, phone: e.target.value })
                 }
+                className={invalidFieldClass(livePhoneError(newUser.phone))}
                 required
               />
+              {livePhoneError(newUser.phone) && <p className="text-xs text-red-600 mt-1">{livePhoneError(newUser.phone)}</p>}
             </div>
             <div>
               <Label>Facility Name *</Label>
@@ -3157,15 +3291,31 @@ export const AdminDashboard = () => {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label>Price (KES)</Label>
+              <Label>Buying Price (KES)</Label>
               <Input
                 type="number"
+                min="0"
+                value={newProduct.buying_price}
+                onChange={(e) =>
+                  setNewProduct({ ...newProduct, buying_price: e.target.value })
+                }
+                placeholder="Supplier cost (admin only)"
+              />
+            </div>
+            <div>
+              <Label>Selling Price (KES)</Label>
+              <Input
+                type="number"
+                min="0"
                 value={newProduct.price}
                 onChange={(e) =>
                   setNewProduct({ ...newProduct, price: e.target.value })
                 }
+                placeholder="Catalogue list price"
               />
             </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Package</Label>
               <Input
@@ -3175,8 +3325,6 @@ export const AdminDashboard = () => {
                 }
               />
             </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
             <div>
               <Label>Stocking Unit</Label>
               <Input
@@ -3189,26 +3337,26 @@ export const AdminDashboard = () => {
                 }
               />
             </div>
-            <div>
-              <Label>Category *</Label>
-              <Select
-                value={newProduct.category_id}
-                onValueChange={(v) =>
-                  setNewProduct({ ...newProduct, category_id: v })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.category_id} value={c.category_id}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          </div>
+          <div>
+            <Label>Category *</Label>
+            <Select
+              value={newProduct.category_id}
+              onValueChange={(v) =>
+                setNewProduct({ ...newProduct, category_id: v })
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((c) => (
+                  <SelectItem key={c.category_id} value={c.category_id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <ImageUploadField
             type={imageUploadType}
@@ -3290,15 +3438,29 @@ export const AdminDashboard = () => {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Price (KES)</Label>
+                <Label>Buying Price (KES)</Label>
                 <Input
                   type="number"
+                  min="0"
+                  value={panelData.buying_price ?? 0}
+                  onChange={(e) =>
+                    setPanelData({ ...panelData, buying_price: e.target.value })
+                  }
+                />
+              </div>
+              <div>
+                <Label>Selling Price (KES)</Label>
+                <Input
+                  type="number"
+                  min="0"
                   value={panelData.price}
                   onChange={(e) =>
                     setPanelData({ ...panelData, price: e.target.value })
                   }
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Package</Label>
                 <Input
@@ -3308,8 +3470,6 @@ export const AdminDashboard = () => {
                   }
                 />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label>Stocking Unit</Label>
                 <Input
@@ -3322,26 +3482,26 @@ export const AdminDashboard = () => {
                   }
                 />
               </div>
-              <div>
-                <Label>Category *</Label>
-                <Select
-                  value={panelData.category_id}
-                  onValueChange={(v) =>
-                    setPanelData({ ...panelData, category_id: v })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.category_id} value={c.category_id}>
-                        {c.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            </div>
+            <div>
+              <Label>Category *</Label>
+              <Select
+                value={panelData.category_id}
+                onValueChange={(v) =>
+                  setPanelData({ ...panelData, category_id: v })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c.category_id} value={c.category_id}>
+                      {c.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <ImageUploadField
               type={imageUploadType}
@@ -3724,6 +3884,7 @@ export const AdminDashboard = () => {
                 <Label className="text-xs">Email *</Label>
                 <Input
                   type="email"
+                  autoComplete="email"
                   placeholder="john@hospital.com"
                   value={quoteFormData.email}
                   onChange={(e) =>
@@ -3732,12 +3893,17 @@ export const AdminDashboard = () => {
                       email: e.target.value,
                     })
                   }
+                  className={invalidFieldClass(liveEmailError(quoteFormData.email))}
                   required
                 />
+                {liveEmailError(quoteFormData.email) && <p className="text-xs text-red-600 mt-1">{liveEmailError(quoteFormData.email)}</p>}
               </div>
               <div>
                 <Label className="text-xs">Phone *</Label>
                 <Input
+                  type="tel"
+                  inputMode="tel"
+                  autoComplete="tel"
                   placeholder="+254 700 000 000"
                   value={quoteFormData.phone}
                   onChange={(e) =>
@@ -3746,8 +3912,10 @@ export const AdminDashboard = () => {
                       phone: e.target.value,
                     })
                   }
+                  className={invalidFieldClass(livePhoneError(quoteFormData.phone))}
                   required
                 />
+                {livePhoneError(quoteFormData.phone) && <p className="text-xs text-red-600 mt-1">{livePhoneError(quoteFormData.phone)}</p>}
               </div>
               <div className="col-span-2">
                 <Label className="text-xs">Address</Label>
@@ -3852,11 +4020,13 @@ export const AdminDashboard = () => {
                           const prod = products.find((p) => p.product_id === v);
                           const newItems = [...quoteFormData.items];
                           newItems[idx] = {
+                            ...item,
                             product_id: v,
                             product_name: prod?.name || "",
                             category: prod?.category_name || "",
-                            quantity: item.quantity,
-                            unit_price: prod?.price || 0,
+                            list_price: prod?.price || item.list_price || 0,
+                            buying_price: prod?.buying_price || item.buying_price || 0,
+                            unit_price: item.unit_price || prod?.price || 0,
                           };
                           setQuoteFormData({
                             ...quoteFormData,
@@ -3934,7 +4104,37 @@ export const AdminDashboard = () => {
                     </div>
 
                     <div>
-                      <Label className="text-xs">Unit Price (KES)</Label>
+                      <Label className="text-xs">Buying (KES)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        className="text-sm bg-amber-50"
+                        value={item.buying_price ?? 0}
+                        onChange={(e) => {
+                          const newItems = [...quoteFormData.items];
+                          newItems[idx].buying_price =
+                            parseFloat(e.target.value) || 0;
+                          setQuoteFormData({
+                            ...quoteFormData,
+                            items: newItems,
+                          });
+                        }}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">List Price (KES)</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        className="text-sm bg-gray-50"
+                        value={item.list_price ?? 0}
+                        readOnly
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-xs">Quoted Price (KES)</Label>
                       <Input
                         type="number"
                         min="0"
@@ -3953,8 +4153,28 @@ export const AdminDashboard = () => {
                     </div>
                   </div>
 
+                  {item.notes && (
+                    <p className="text-xs text-gray-600">
+                      <span className="font-medium">Customer note:</span> {item.notes}
+                    </p>
+                  )}
+
+                  <div>
+                    <Label className="text-xs">Admin note</Label>
+                    <Input
+                      className="text-sm"
+                      value={item.admin_notes || ""}
+                      onChange={(e) => {
+                        const newItems = [...quoteFormData.items];
+                        newItems[idx].admin_notes = e.target.value;
+                        setQuoteFormData({ ...quoteFormData, items: newItems });
+                      }}
+                      placeholder="Internal pricing or sourcing notes"
+                    />
+                  </div>
+
                   <div className="text-right text-xs text-gray-600">
-                    Line Total:{" "}
+                    Quoted line total:{" "}
                     <span className="font-semibold text-[#006332]">
                       KES{" "}
                       {(
@@ -4278,554 +4498,4 @@ const ImageUploadField = ({
       />
     )}
   </div>
-);
-
-const SettingsSiteInfo = ({ settings, setSettings, onSave, loading }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="text-xl">Site Information</CardTitle>
-      <CardDescription>Manage contact and social links</CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-6">
-      <div className="grid md:grid-cols-2 gap-6">
-        <div>
-          <Label>Company Name</Label>
-          <Input
-            value={settings.company_name || ""}
-            onChange={(e) =>
-              setSettings({ ...settings, company_name: e.target.value })
-            }
-            className="mt-1"
-          />
-        </div>
-        <div>
-          <Label>Website</Label>
-          <Input
-            placeholder="https://hamptonscientific.com"
-            value={settings.website || ""}
-            onChange={(e) =>
-              setSettings({
-                ...settings,
-                website: e.target.value,
-              })
-            }
-            className="mt-1"
-            data-testid="website-input"
-          />
-        </div>
-        <div>
-          <Label>Phone</Label>
-          <Input
-            value={settings.phone || ""}
-            onChange={(e) =>
-              setSettings({ ...settings, phone: e.target.value })
-            }
-            className="mt-1"
-          />
-        </div>
-        <div>
-          <Label>Email</Label>
-          <Input
-            value={settings.email || ""}
-            onChange={(e) =>
-              setSettings({ ...settings, email: e.target.value })
-            }
-            className="mt-1"
-          />
-        </div>
-        <div>
-          <Label>Working Hours</Label>
-          <Input
-            value={settings.working_hours || ""}
-            onChange={(e) =>
-              setSettings({ ...settings, working_hours: e.target.value })
-            }
-            className="mt-1"
-          />
-        </div>
-        <div className="md:col-span-2">
-          <Label>Address</Label>
-          <Input
-            value={settings.address || ""}
-            onChange={(e) =>
-              setSettings({ ...settings, address: e.target.value })
-            }
-            className="mt-1"
-          />
-        </div>
-        <div className="md:col-span-2">
-          <Label>P.O. Box</Label>
-          <Input
-            value={settings.po_box || ""}
-            onChange={(e) =>
-              setSettings({ ...settings, po_box: e.target.value })
-            }
-            className="mt-1"
-          />
-        </div>
-      </div>
-      <div className="border-t pt-6">
-        <h3 className="font-semibold mb-4">Social Media</h3>
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <Label>Facebook</Label>
-            <Input
-              value={settings.facebook_url || ""}
-              onChange={(e) =>
-                setSettings({ ...settings, facebook_url: e.target.value })
-              }
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label>Twitter</Label>
-            <Input
-              value={settings.twitter_url || ""}
-              onChange={(e) =>
-                setSettings({ ...settings, twitter_url: e.target.value })
-              }
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label>LinkedIn</Label>
-            <Input
-              value={settings.linkedin_url || ""}
-              onChange={(e) =>
-                setSettings({ ...settings, linkedin_url: e.target.value })
-              }
-              className="mt-1"
-            />
-          </div>
-        </div>
-      </div>
-      <div className="flex justify-end">
-        <Button
-          onClick={onSave}
-          disabled={loading}
-          className="bg-[#006332] hover:bg-[#005028] gap-2"
-          data-testid="save-site-settings-btn"
-        >
-          {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <CheckCircle className="w-4 h-4" />
-          )}{" "}
-          Save
-        </Button>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const SettingsPaymentInfo = ({ settings, setSettings, onSave, loading }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="text-xl">Payment Information</CardTitle>
-      <CardDescription>
-        Bank and mobile payment details for invoices
-      </CardDescription>
-    </CardHeader>
-    <CardContent className="space-y-6">
-      <div className="border rounded-lg p-5 space-y-4">
-        <h4 className="font-semibold">Bank Details</h4>
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <Label>Bank Name</Label>
-            <Input
-              value={settings.bank_name || ""}
-              onChange={(e) =>
-                setSettings({ ...settings, bank_name: e.target.value })
-              }
-              className="mt-1"
-              data-testid="bank-name-input"
-            />
-          </div>
-          <div>
-            <Label>Account Name</Label>
-            <Input
-              value={settings.bank_account_name || ""}
-              onChange={(e) =>
-                setSettings({ ...settings, bank_account_name: e.target.value })
-              }
-              className="mt-1"
-              data-testid="bank-account-name-input"
-            />
-          </div>
-          <div>
-            <Label>Account Number</Label>
-            <Input
-              value={settings.bank_account_number || ""}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  bank_account_number: e.target.value,
-                })
-              }
-              className="mt-1"
-              data-testid="bank-account-number-input"
-            />
-          </div>
-        </div>
-      </div>
-      <div className="border rounded-lg p-5 space-y-4">
-        <h4 className="font-semibold">Lipa Na Mpesa</h4>
-        <div className="grid md:grid-cols-3 gap-4">
-          <div>
-            <Label>Paybill</Label>
-            <Input
-              value={settings.mpesa_paybill || ""}
-              onChange={(e) =>
-                setSettings({ ...settings, mpesa_paybill: e.target.value })
-              }
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label>Account Number</Label>
-            <Input
-              value={settings.mpesa_account_number || ""}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  mpesa_account_number: e.target.value,
-                })
-              }
-              className="mt-1"
-            />
-          </div>
-          <div>
-            <Label>Account Name</Label>
-            <Input
-              value={settings.mpesa_account_name || ""}
-              onChange={(e) =>
-                setSettings({ ...settings, mpesa_account_name: e.target.value })
-              }
-              className="mt-1"
-            />
-          </div>
-        </div>
-      </div>
-      <div className="border rounded-lg p-5 space-y-4">
-        <h4 className="font-semibold mb-3">Default Terms</h4>
-        <div className="grid md:grid-cols-2 gap-4 max-w-2xl">
-          <div>
-            <Label>Default Payment Terms (text)</Label>
-            <Input
-              value={settings.default_payment_terms || ""}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  default_payment_terms: e.target.value,
-                })
-              }
-              className="mt-1"
-              data-testid="payment-terms-input"
-            />
-          </div>
-          <div>
-            <Label>Quote Terms (validity days)</Label>
-            <Input
-              type="number"
-              min="1"
-              max="365"
-              value={settings.default_quote_validity_days ?? 7}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  default_quote_validity_days: parseInt(e.target.value) || 7,
-                })
-              }
-              className="mt-1"
-              data-testid="quote-validity-days-input"
-            />
-          </div>
-          <div>
-            <Label>Invoice Terms (due days)</Label>
-            <Input
-              type="number"
-              min="1"
-              max="365"
-              value={settings.default_invoice_due_days ?? 14}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  default_invoice_due_days: parseInt(e.target.value) || 14,
-                })
-              }
-              className="mt-1"
-              data-testid="invoice-due-days-input"
-            />
-          </div>
-        </div>
-        <div className="grid md:grid-cols-2 gap-4 max-w-md">
-          <div>
-            <Label>Default VAT Rate (%)</Label>
-            <Input
-              type="number"
-              min="0"
-              max="100"
-              value={settings.default_tax_rate ?? 16}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  default_tax_rate: parseFloat(e.target.value) || 0,
-                })
-              }
-              className="mt-1"
-            />
-          </div>
-          <div className="flex items-center justify-between mt-5 md:mt-7">
-            <div>
-              <Label className="text-xs">Include VAT by default</Label>
-              <p className="text-[11px] text-gray-500">
-                Controls whether new quotes start with VAT included.
-              </p>
-            </div>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={settings.default_include_vat !== false}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    default_include_vat: e.target.checked,
-                  })
-                }
-              />
-              <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#006332]" />
-            </label>
-          </div>
-        </div>
-      </div>
-      <div className="flex justify-end">
-        <Button
-          onClick={onSave}
-          disabled={loading}
-          className="bg-[#006332] hover:bg-[#005028] gap-2"
-          data-testid="save-payment-settings-btn"
-        >
-          {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <CheckCircle className="w-4 h-4" />
-          )}{" "}
-          Save
-        </Button>
-      </div>
-    </CardContent>
-  </Card>
-);
-
-const SettingsEmailFollowUps = ({
-  settings,
-  setSettings,
-  onSave,
-  loading,
-  onViewLogs,
-  emailLogs,
-  showLogs,
-  setShowLogs,
-}) => (
-  <Card>
-    <CardHeader>
-      <CardTitle className="text-xl">Email Follow-Up Settings</CardTitle>
-    </CardHeader>
-    <CardContent className="space-y-6">
-      <div className="border rounded-lg p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="font-semibold">Quote Follow-Ups</h4>
-            <p className="text-sm text-gray-500">
-              Auto-remind customers about pending quotes
-            </p>
-          </div>
-          <label
-            className="relative inline-flex items-center cursor-pointer"
-            data-testid="quote-followup-toggle"
-          >
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={settings.quote_followup_enabled}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  quote_followup_enabled: e.target.checked,
-                })
-              }
-            />
-            <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#006332]"></div>
-          </label>
-        </div>
-        {settings.quote_followup_enabled && (
-          <div>
-            <Label>Follow-up after (hours)</Label>
-            <Input
-              type="number"
-              min="1"
-              max="168"
-              value={settings.quote_followup_hours}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  quote_followup_hours: parseInt(e.target.value) || 24,
-                })
-              }
-              className="mt-1 max-w-xs"
-              data-testid="quote-followup-hours"
-            />
-          </div>
-        )}
-      </div>
-      <div className="border rounded-lg p-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <h4 className="font-semibold">Invoice Reminders</h4>
-            <p className="text-sm text-gray-500">
-              Auto-remind about unpaid invoices
-            </p>
-          </div>
-          <label
-            className="relative inline-flex items-center cursor-pointer"
-            data-testid="invoice-followup-toggle"
-          >
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={settings.invoice_followup_enabled}
-              onChange={(e) =>
-                setSettings({
-                  ...settings,
-                  invoice_followup_enabled: e.target.checked,
-                })
-              }
-            />
-            <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#006332]"></div>
-          </label>
-        </div>
-        {settings.invoice_followup_enabled && (
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <Label>Remind before due (days)</Label>
-              <Input
-                type="number"
-                min="1"
-                max="30"
-                value={settings.invoice_followup_days}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    invoice_followup_days: parseInt(e.target.value) || 7,
-                  })
-                }
-                className="mt-1"
-              />
-            </div>
-            <div>
-              <Label>Overdue frequency (days)</Label>
-              <Input
-                type="number"
-                min="1"
-                max="14"
-                value={settings.invoice_overdue_reminder_days}
-                onChange={(e) =>
-                  setSettings({
-                    ...settings,
-                    invoice_overdue_reminder_days:
-                      parseInt(e.target.value) || 3,
-                  })
-                }
-                className="mt-1"
-              />
-            </div>
-          </div>
-        )}
-      </div>
-      <div className="flex items-center justify-between pt-4">
-        <Button
-          variant="outline"
-          onClick={onViewLogs}
-          className="gap-2"
-          data-testid="view-email-logs-btn"
-        >
-          <Eye className="w-4 h-4" /> View Logs
-        </Button>
-        <Button
-          onClick={onSave}
-          disabled={loading}
-          className="bg-[#006332] hover:bg-[#005028] gap-2"
-          data-testid="save-email-settings-btn"
-        >
-          {loading ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <CheckCircle className="w-4 h-4" />
-          )}{" "}
-          Save
-        </Button>
-      </div>
-      {showLogs && (
-        <div className="border-t pt-4">
-          <div className="flex justify-between mb-3">
-            <h4 className="font-semibold">Email Logs</h4>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowLogs(false)}
-            >
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-          <div className="max-h-64 overflow-y-auto">
-            {emailLogs.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">No logs</p>
-            ) : (
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-3 py-2 text-left text-xs">Type</th>
-                    <th className="px-3 py-2 text-left text-xs">To</th>
-                    <th className="px-3 py-2 text-left text-xs">Status</th>
-                    <th className="px-3 py-2 text-left text-xs">Date</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {emailLogs.map((log, i) => (
-                    <tr key={i} className="border-b">
-                      <td className="px-3 py-2">
-                        <Badge className="bg-gray-100 text-gray-800">
-                          {log.type?.replace(/_/g, " ")}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2 text-gray-600">
-                        {Array.isArray(log.to) ? log.to.join(", ") : log.to}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Badge
-                          className={
-                            log.status === "sent"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }
-                        >
-                          {log.status}
-                        </Badge>
-                      </td>
-                      <td className="px-3 py-2 text-xs text-gray-500">
-                        {log.sent_at
-                          ? new Date(log.sent_at).toLocaleString()
-                          : "N/A"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-      )}
-    </CardContent>
-  </Card>
 );

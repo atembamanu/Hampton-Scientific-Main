@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { Textarea } from '../components/ui/textarea';
-import { User, Building2, MapPin, Phone, Mail, Edit2, Save, LogOut, FileText, Clock, Loader2, ChevronLeft, ChevronRight, CheckCircle, X, DollarSign, ThumbsUp } from 'lucide-react';
+import { User, Building2, MapPin, Phone, Mail, Edit2, Save, LogOut, FileText, Clock, Loader2, ChevronLeft, ChevronRight, CheckCircle, X, DollarSign, RefreshCw, Eye, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '../context/AuthContext';
+import { useQuote } from '../context/QuoteContext';
 import axios from 'axios';
 import { API_URL } from '@/config/apiBaseUrl';
+import { phoneError, livePhoneError, invalidFieldClass } from '../utils/validation';
 
 const QUOTES_PER_PAGE = 10;
 
@@ -19,7 +21,7 @@ const SlideOutPanel = ({ isOpen, onClose, title, subtitle, children }) => {
   if (!isOpen) return null;
   return (
     <div className="fixed inset-0 z-50 flex justify-end">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-0 bg-ink/50" onClick={onClose} />
       <div className="relative w-[40vw] min-w-[400px] max-w-[700px] h-full bg-white shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
         <div className="flex items-center justify-between px-6 py-4 border-b bg-gray-50">
           <div>
@@ -36,13 +38,17 @@ const SlideOutPanel = ({ isOpen, onClose, title, subtitle, children }) => {
 
 export const Profile = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, isAuthenticated, loading: authLoading, logout, updateProfile, getAuthHeader } = useAuth();
+  const { loadHistoryItems } = useQuote();
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editData, setEditData] = useState({});
   const [quotes, setQuotes] = useState([]);
   const [loadingQuotes, setLoadingQuotes] = useState(true);
-  const [activeSection, setActiveSection] = useState('profile');
+  const [activeSection, setActiveSection] = useState(location.state?.section || 'profile');
+  const [expandedQuoteId, setExpandedQuoteId] = useState(null);
+  const [expandedInvoiceId, setExpandedInvoiceId] = useState(null);
 
   // Quote filtering
   const [statusFilter, setStatusFilter] = useState('all');
@@ -61,6 +67,14 @@ export const Profile = () => {
 
   useEffect(() => { if (!authLoading && !isAuthenticated) navigate('/login'); }, [isAuthenticated, authLoading, navigate]);
   useEffect(() => { if (user) setEditData({ firstName: user.firstName || '', lastName: user.lastName || '', phone: user.phone || '', facilityName: user.facilityName || '', facilityType: user.facilityType || '', address: user.address || '', city: user.city || '', postalCode: user.postalCode || '' }); }, [user]);
+  useEffect(() => {
+    if (location.state?.section) setActiveSection(location.state.section);
+  }, [location.state]);
+
+  const handleQuoteAgain = (items, sourceLabel) => {
+    const ok = loadHistoryItems(items, { sourceLabel });
+    if (ok) navigate('/quote-cart');
+  };
 
   useEffect(() => {
     const fetchQuotes = async () => {
@@ -79,7 +93,15 @@ export const Profile = () => {
     if (isAuthenticated) { fetchQuotes(); fetchInvoices(); }
   }, [isAuthenticated, getAuthHeader]);
 
-  const handleSave = async () => { setIsSaving(true); const result = await updateProfile(editData); if (result.success) { setIsEditing(false); toast.success('Profile updated!'); } else toast.error(result.error); setIsSaving(false); };
+  const handleSave = async () => {
+    const invalidPhone = phoneError(editData.phone);
+    if (invalidPhone) { toast.error(invalidPhone); return; }
+    setIsSaving(true);
+    const result = await updateProfile(editData);
+    if (result.success) { setIsEditing(false); toast.success('Profile updated!'); }
+    else toast.error(result.error);
+    setIsSaving(false);
+  };
   const handleLogout = () => { logout(); toast.success('Logged out'); navigate('/'); };
 
   const getStatusColor = (status) => {
@@ -99,7 +121,9 @@ export const Profile = () => {
         items: responseType === 'negotiating' ? quote.items.map(item => ({ product_id: item.product_id, customer_proposed_price: proposedPrices[item.product_id] || null })) : null
       };
       await axios.put(`${API_URL}/api/quotes/${quoteId}/respond`, responseData, { headers: getAuthHeader() });
-      setQuotes(prev => prev.map(q => q.id === quoteId ? { ...q, customer_response: responseType, customer_notes: responseNotes } : q));
+      // Refresh quotes so handler/status stay in sync with backend
+      const res = await axios.get(`${API_URL}/api/quotes`, { headers: getAuthHeader() });
+      setQuotes(res.data);
       toast.success(responseType === 'accepted' ? 'Quote accepted! Your order will be processed.' : 'Counter-proposal submitted.');
       setShowResponsePanel(null); setResponseType('accepted'); setResponseNotes(''); setProposedPrices({});
     } catch (e) { toast.error(e.response?.data?.detail || 'Failed to submit response'); }
@@ -110,7 +134,7 @@ export const Profile = () => {
   const totalQuotePages = Math.ceil(filteredQuotesAll.length / QUOTES_PER_PAGE);
   const filteredQuotes = filteredQuotesAll.slice((quotePage - 1) * QUOTES_PER_PAGE, quotePage * QUOTES_PER_PAGE);
 
-  if (authLoading) return <div className="min-h-screen pt-36 pb-20 bg-gray-50 flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-[#006332]" /></div>;
+  if (authLoading) return <div className="min-h-screen pt-[88px] pb-20 bg-gray-50 flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-[#006332]" /></div>;
   if (!user) return null;
 
   const navItems = [
@@ -170,7 +194,7 @@ export const Profile = () => {
                     <div className="space-y-2"><Label>First Name</Label>{isEditing ? <Input value={editData.firstName} onChange={e => setEditData({ ...editData, firstName: e.target.value })} /> : <p className="text-lg font-medium">{user.firstName}</p>}</div>
                     <div className="space-y-2"><Label>Last Name</Label>{isEditing ? <Input value={editData.lastName} onChange={e => setEditData({ ...editData, lastName: e.target.value })} /> : <p className="text-lg font-medium">{user.lastName}</p>}</div>
                     <div className="space-y-2"><Label className="flex items-center gap-2"><Mail className="w-4 h-4" /> Email</Label><p className="text-lg font-medium">{user.email}</p><p className="text-xs text-gray-500">Cannot be changed</p></div>
-                    <div className="space-y-2"><Label className="flex items-center gap-2"><Phone className="w-4 h-4" /> Phone</Label>{isEditing ? <Input type="tel" value={editData.phone} onChange={e => setEditData({ ...editData, phone: e.target.value })} /> : <p className="text-lg font-medium">{user.phone}</p>}</div>
+                    <div className="space-y-2"><Label className="flex items-center gap-2"><Phone className="w-4 h-4" /> Phone</Label>{isEditing ? <><Input type="tel" inputMode="tel" autoComplete="tel" value={editData.phone} onChange={e => setEditData({ ...editData, phone: e.target.value })} className={invalidFieldClass(livePhoneError(editData.phone))} />{livePhoneError(editData.phone) && <p className="text-xs text-red-600">{livePhoneError(editData.phone)}</p>}</> : <p className="text-lg font-medium">{user.phone}</p>}</div>
                   </div>
                   {isEditing && <div className="flex gap-4 justify-end mt-6"><Button onClick={() => setIsEditing(false)} variant="outline" disabled={isSaving}>Cancel</Button><Button onClick={handleSave} disabled={isSaving} className="bg-[#006332] hover:bg-[#005028] text-white gap-2" data-testid="save-profile-btn">{isSaving ? <><Loader2 className="w-4 h-4 animate-spin" /> Saving...</> : <><Save className="w-4 h-4" /> Save</>}</Button></div>}
                 </CardContent>
@@ -180,7 +204,12 @@ export const Profile = () => {
             {/* Company Info */}
             {activeSection === 'company' && (
               <Card>
-                <CardHeader><CardTitle className="text-2xl">Company Information</CardTitle><CardDescription>Your facility details</CardDescription></CardHeader>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <div><CardTitle className="text-2xl">Company Information</CardTitle><CardDescription>Your facility details</CardDescription></div>
+                    {!isEditing && <Button onClick={() => setIsEditing(true)} variant="outline" className="gap-2"><Edit2 className="w-4 h-4" /> Edit</Button>}
+                  </div>
+                </CardHeader>
                 <CardContent>
                   <div className="grid md:grid-cols-2 gap-6">
                     <div className="space-y-2"><Label>Facility Name</Label>{isEditing ? <Input value={editData.facilityName} onChange={e => setEditData({ ...editData, facilityName: e.target.value })} /> : <p className="text-lg font-medium">{user.facilityName}</p>}</div>
@@ -199,7 +228,10 @@ export const Profile = () => {
               <Card>
                 <CardHeader>
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                    <div><CardTitle className="text-2xl">Quote History</CardTitle><CardDescription>Your previous quote requests</CardDescription></div>
+                    <div>
+                      <CardTitle className="text-2xl">Quote History</CardTitle>
+                      <CardDescription>Track requests and re-order items as a new quote</CardDescription>
+                    </div>
                     {quotes.length > 0 && <div className="flex gap-2">
                       <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setQuotePage(1); }} className="px-3 py-2 border rounded-lg text-sm"><option value="all">All Status</option><option value="quoted">Quoted</option><option value="invoiced">Invoiced</option></select>
                       <select value={sortOrder} onChange={e => { setSortOrder(e.target.value); setQuotePage(1); }} className="px-3 py-2 border rounded-lg text-sm"><option value="newest">Newest First</option><option value="oldest">Oldest First</option></select>
@@ -215,16 +247,37 @@ export const Profile = () => {
                             <thead><tr className="border-b-2 border-gray-200"><th className="text-left py-3 px-4 font-semibold text-gray-700">Date</th><th className="text-left py-3 px-4 font-semibold text-gray-700">Items</th><th className="text-right py-3 px-4 font-semibold text-gray-700">Value</th><th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th><th className="text-center py-3 px-4 font-semibold text-gray-700">Action</th></tr></thead>
                             <tbody>
                               {filteredQuotes.map(quote => (
-                                <tr key={quote.id} className="border-b hover:bg-gray-50 transition-colors">
-                                  <td className="py-4 px-4"><div className="flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /><p className="font-medium">{new Date(quote.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p></div></td>
-                                  <td className="py-4 px-4"><p className="font-medium">{quote.items?.length || 0} items</p><p className="text-xs text-gray-500 truncate max-w-[200px]">{quote.items?.slice(0, 2).map(i => i.product_name).join(', ')}{quote.items?.length > 2 && '...'}</p></td>
-                                  <td className="py-4 px-4 text-right">{quote.status === 'quoted' && (quote.items || []).every(i => !i.unit_price) ? <span className="text-gray-500 text-sm">Awaiting quote</span> : <p className="font-bold text-[#006332]">KES {calculateQuoteValue(quote.items).toLocaleString()}</p>}</td>
-                                  <td className="py-4 px-4 text-center"><div className="flex flex-col items-center gap-1"><Badge className={getStatusColor(quote.status)}>{quote.status?.charAt(0).toUpperCase() + quote.status?.slice(1)}</Badge>{quote.customer_response && <span className={`text-xs ${quote.customer_response === 'accepted' ? 'text-green-600' : 'text-orange-600'}`}>You: {quote.customer_response}</span>}</div></td>
-                                  <td className="py-4 px-4 text-center"><div className="flex justify-center gap-2">
-                                    {quote.status === 'quoted' && quote.current_handler !== 'ADMIN_REVIEW' && !quote.customer_response && <button onClick={() => { setShowResponsePanel(quote); setProposedPrices({}); setResponseNotes(''); setResponseType('accepted'); }} className="bg-[#006332] text-white px-3 py-1 rounded text-sm hover:bg-[#005028]" data-testid={`respond-quote-${quote.id}`}>Respond</button>}
-                                    {quote.status === 'quoted' && quote.current_handler === 'ADMIN_REVIEW' && <span className="text-sm text-purple-600 font-medium">Pending Admin Review</span>}
-                                  </div></td>
-                                </tr>
+                                <React.Fragment key={quote.id}>
+                                  <tr className="border-b hover:bg-gray-50 transition-colors">
+                                    <td className="py-4 px-4"><div className="flex items-center gap-2"><Clock className="w-4 h-4 text-gray-400" /><div><p className="font-medium">{new Date(quote.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>{quote.quote_number && <p className="text-xs text-gray-500 font-mono">{quote.quote_number}</p>}</div></div></td>
+                                    <td className="py-4 px-4"><p className="font-medium">{quote.items?.length || 0} items</p><p className="text-xs text-gray-500 truncate max-w-[200px]">{quote.items?.slice(0, 2).map(i => i.product_name).join(', ')}{quote.items?.length > 2 && '...'}</p></td>
+                                    <td className="py-4 px-4 text-right">{quote.status === 'quoted' && (quote.items || []).every(i => !i.unit_price) ? <span className="text-gray-500 text-sm">Awaiting quote</span> : <p className="font-bold text-[#006332]">KES {calculateQuoteValue(quote.items).toLocaleString()}</p>}</td>
+                                    <td className="py-4 px-4 text-center"><div className="flex flex-col items-center gap-1"><Badge className={getStatusColor(quote.status)}>{quote.status?.charAt(0).toUpperCase() + quote.status?.slice(1)}</Badge>{quote.customer_response && <span className={`text-xs ${quote.customer_response === 'accepted' ? 'text-green-600' : 'text-orange-600'}`}>You: {quote.customer_response}</span>}</div></td>
+                                    <td className="py-4 px-4"><div className="flex flex-wrap justify-center gap-2">
+                                      <button type="button" onClick={() => setExpandedQuoteId(expandedQuoteId === quote.id ? null : quote.id)} className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-[#006332]" data-testid={`view-quote-items-${quote.id}`}><Eye className="w-3.5 h-3.5" /> Items</button>
+                                      <button type="button" onClick={() => handleQuoteAgain(quote.items, quote.quote_number || 'previous quote')} className="inline-flex items-center gap-1 text-sm font-medium text-[#006332] hover:underline" data-testid={`requote-${quote.id}`}><RefreshCw className="w-3.5 h-3.5" /> Quote again</button>
+                                      {quote.status === 'quoted' && quote.current_handler !== 'ADMIN_REVIEW' && !quote.customer_response && <button onClick={() => { setShowResponsePanel(quote); setProposedPrices({}); setResponseNotes(''); setResponseType('accepted'); }} className="bg-[#006332] text-white px-3 py-1 rounded text-sm hover:bg-[#005028]" data-testid={`respond-quote-${quote.id}`}>Respond</button>}
+                                      {quote.status === 'quoted' && quote.current_handler === 'ADMIN_REVIEW' && <span className="text-sm text-purple-600 font-medium">Pending Admin Review</span>}
+                                    </div></td>
+                                  </tr>
+                                  {expandedQuoteId === quote.id && (
+                                    <tr className="bg-gray-50 border-b">
+                                      <td colSpan={5} className="px-4 py-3">
+                                        <div className="rounded-lg border bg-white overflow-hidden">
+                                          <table className="w-full text-sm">
+                                            <thead className="bg-gray-100"><tr><th className="text-left p-2">Product</th><th className="text-left p-2">Category</th><th className="text-center p-2">Qty</th><th className="text-left p-2">Notes</th></tr></thead>
+                                            <tbody>
+                                              {(quote.items || []).map((item, idx) => (
+                                                <tr key={item.id || idx} className="border-t"><td className="p-2">{item.product_name}</td><td className="p-2 text-gray-500">{item.category || '—'}</td><td className="p-2 text-center">{item.quantity}</td><td className="p-2 text-gray-500">{item.notes || '—'}</td></tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-2">Quote again loads these items into a new cart — submitting creates a new quote request.</p>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </React.Fragment>
                               ))}
                             </tbody>
                           </table>
@@ -237,20 +290,95 @@ export const Profile = () => {
             {/* Invoices */}
             {activeSection === 'invoices' && (
               <Card>
-                <CardHeader><CardTitle className="text-2xl">Invoices</CardTitle><CardDescription>Your invoices and payment history</CardDescription></CardHeader>
+                <CardHeader>
+                  <CardTitle className="text-2xl">Invoices</CardTitle>
+                  <CardDescription>Download invoices or quote the same items again as a new order</CardDescription>
+                </CardHeader>
                 <CardContent>
                   {loadingInvoices ? <div className="flex justify-center py-8"><Loader2 className="w-8 h-8 animate-spin text-[#006332]" /></div>
-                    : customerInvoices.length === 0 ? <div className="text-center py-8"><DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" /><p className="text-gray-500">No invoices yet</p></div>
-                      : <div className="overflow-x-auto"><table className="w-full"><thead><tr className="border-b-2 border-gray-200"><th className="text-left py-3 px-4 font-semibold text-gray-700">Invoice #</th><th className="text-left py-3 px-4 font-semibold text-gray-700">Date</th><th className="text-right py-3 px-4 font-semibold text-gray-700">Total</th><th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th><th className="text-center py-3 px-4 font-semibold text-gray-700">Action</th></tr></thead>
-                        <tbody>{customerInvoices.map(inv => (
-                          <tr key={inv.id} className="border-b hover:bg-gray-50">
-                            <td className="py-4 px-4 font-mono font-semibold text-[#006332]">{inv.invoice_number}</td>
-                            <td className="py-4 px-4">{new Date(inv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
-                            <td className="py-4 px-4 text-right font-bold">KES {(inv.total || 0).toLocaleString()}</td>
-                            <td className="py-4 px-4 text-center"><Badge className={inv.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>{inv.status?.charAt(0).toUpperCase() + inv.status?.slice(1)}</Badge></td>
-                            <td className="py-4 px-4 text-center"><button onClick={async () => { try { const r = await axios.get(`${API_URL}/api/invoices/${inv.id}/download`, { headers: getAuthHeader(), responseType: 'blob' }); const u = window.URL.createObjectURL(new Blob([r.data])); const a = document.createElement('a'); a.href = u; a.setAttribute('download', `Invoice_${inv.invoice_number}.pdf`); document.body.appendChild(a); a.click(); a.remove(); } catch (e) { toast.error('Failed to download'); } }} className="text-[#006332] hover:underline text-sm font-medium" data-testid={`download-invoice-${inv.id}`}>Download PDF</button></td>
-                          </tr>
-                        ))}</tbody></table></div>}
+                    : customerInvoices.length === 0 ? (
+                      <div className="text-center py-8">
+                        <DollarSign className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                        <p className="text-gray-500 mb-4">No invoices yet</p>
+                        <Button onClick={() => navigate('/products')} className="bg-[#006332] text-white">Browse Products</Button>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <table className="w-full">
+                          <thead>
+                            <tr className="border-b-2 border-gray-200">
+                              <th className="text-left py-3 px-4 font-semibold text-gray-700">Invoice #</th>
+                              <th className="text-left py-3 px-4 font-semibold text-gray-700">Date</th>
+                              <th className="text-right py-3 px-4 font-semibold text-gray-700">Total</th>
+                              <th className="text-center py-3 px-4 font-semibold text-gray-700">Status</th>
+                              <th className="text-center py-3 px-4 font-semibold text-gray-700">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {customerInvoices.map(inv => (
+                              <React.Fragment key={inv.id}>
+                                <tr className="border-b hover:bg-gray-50">
+                                  <td className="py-4 px-4 font-mono font-semibold text-[#006332]">{inv.invoice_number}</td>
+                                  <td className="py-4 px-4">{new Date(inv.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</td>
+                                  <td className="py-4 px-4 text-right font-bold">KES {(inv.total || 0).toLocaleString()}</td>
+                                  <td className="py-4 px-4 text-center"><Badge className={inv.status === 'paid' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}>{inv.status?.charAt(0).toUpperCase() + inv.status?.slice(1)}</Badge></td>
+                                  <td className="py-4 px-4">
+                                    <div className="flex flex-wrap justify-center gap-2">
+                                      <button type="button" onClick={() => setExpandedInvoiceId(expandedInvoiceId === inv.id ? null : inv.id)} className="inline-flex items-center gap-1 text-sm text-gray-600 hover:text-[#006332]"><Eye className="w-3.5 h-3.5" /> Items</button>
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          try {
+                                            const r = await axios.get(`${API_URL}/api/invoices/${inv.id}/download`, { headers: getAuthHeader(), responseType: 'blob' });
+                                            const u = window.URL.createObjectURL(new Blob([r.data]));
+                                            const a = document.createElement('a');
+                                            a.href = u;
+                                            a.setAttribute('download', `Invoice_${inv.invoice_number}.pdf`);
+                                            document.body.appendChild(a);
+                                            a.click();
+                                            a.remove();
+                                          } catch (e) {
+                                            toast.error('Failed to download');
+                                          }
+                                        }}
+                                        className="inline-flex items-center gap-1 text-[#006332] hover:underline text-sm font-medium"
+                                        data-testid={`download-invoice-${inv.id}`}
+                                      >
+                                        <Download className="w-3.5 h-3.5" /> PDF
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => handleQuoteAgain(inv.items, inv.invoice_number || 'previous invoice')}
+                                        className="inline-flex items-center gap-1 text-sm font-medium text-[#006332] hover:underline"
+                                        data-testid={`requote-invoice-${inv.id}`}
+                                      >
+                                        <RefreshCw className="w-3.5 h-3.5" /> Quote again
+                                      </button>
+                                    </div>
+                                  </td>
+                                </tr>
+                                {expandedInvoiceId === inv.id && (
+                                  <tr className="bg-gray-50 border-b">
+                                    <td colSpan={5} className="px-4 py-3">
+                                      <div className="rounded-lg border bg-white overflow-hidden">
+                                        <table className="w-full text-sm">
+                                          <thead className="bg-gray-100"><tr><th className="text-left p-2">Product</th><th className="text-left p-2">Category</th><th className="text-center p-2">Qty</th></tr></thead>
+                                          <tbody>
+                                            {(inv.items || []).map((item, idx) => (
+                                              <tr key={item.id || idx} className="border-t"><td className="p-2">{item.product_name}</td><td className="p-2 text-gray-500">{item.category || '—'}</td><td className="p-2 text-center">{item.quantity}</td></tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
                 </CardContent>
               </Card>
             )}

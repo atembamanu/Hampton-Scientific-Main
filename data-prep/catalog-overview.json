@@ -1,0 +1,194 @@
+{
+  "source": {
+    "website": "https://microbiology.co.ke/",
+    "company_name": "Microbiology E.A LTD",
+    "tagline": "Redefining Point of Care Testing",
+    "description": "Sale and distribution of In-Vitro Diagnostics and Medical Devices, point of care testing, clinical laboratory equipment and solutions in Kenya and East Africa.",
+    "contact": {
+      "phone": "020 790 5150",
+      "email": "info@microbiology.co.ke",
+      "address": "Garden Court Road, B46",
+      "social": {
+        "facebook": "https://www.facebook.com/microbiologykenya/",
+        "twitter": "https://twitter.com/microbiology_ea",
+        "instagram": "https://www.instagram.com/microbioealtd",
+        "youtube": "https://www.youtube.com/@MicrobiolgyEALtd",
+        "linkedin": "https://www.linkedin.com/in/microbiology-east-africa-limited-5811531a3"
+      }
+    },
+    "scraped_at": "2026-08-18",
+    "catalog_patterns": {
+      "category_url": "https://microbiology.co.ke/product-category/{slug}/",
+      "product_url": "https://microbiology.co.ke/{slug}/"
+    }
+  },
+  "featured_products_homepage": [
+    {
+      "name": "i-Chroma II Reader",
+      "subtitle": "POCT Immunofluorescence Analyzer",
+      "category": "immunoassay"
+    },
+    {
+      "name": "Core Chemistry Analyzer",
+      "subtitle": "Italian-Made auto chemistry analyzer",
+      "category": "clinical-chemistry"
+    },
+    {
+      "name": "ST-200 aQua Electrolyte Analyzer",
+      "subtitle": "Automated ISE electrolyte system",
+      "category": "clinical-chemistry"
+    },
+    {
+      "name": "CellScan 30",
+      "subtitle": "3-part 2-reagent haematology analyzer",
+      "category": "haematology"
+    },
+    {
+      "name": "CellScan 50s",
+      "subtitle": "Low to moderate volume haematology analyzer",
+      "category": "haematology"
+    }
+  ],
+  "category_tree": [
+    {
+      "id": "haematology",
+      "name": "Haematology",
+      "slug": "haematology",
+      "url": "https://microbiology.co.ke/product-category/haematology/",
+      "subcategories": [
+        {
+          "id": "haematology-analyzers",
+          "name": "Haematology Analyzers",
+          "slug": "haematology-analyzers",
+          "products": [
+            "CellScan 30 Analyzer",
+            "CellScan 50 Analyzer",
+            "CellScan 50s Analyzer"
+          ]
+        },
+        {
+          "id": "haematology-reagents",
+          "name": "Haematology Reagents",
+          "slug": "haematology-reagents",
+          "products": [
+            "Cellscan Reagents",
+            "Abacus Haematology Reagents"
+          ]
+        },
+        {
+          "id": "haematology-controls-calibrators",
+          "name": "Haematology Controls & Calibrators",
+          "slug": "haematology-controls-calibrators",
+          "products": []
+        },
+        {
+          "id": "haemoglobin-meters",
+          "name": "Haemoglobin Meters",
+          "slug": "haemoglobin-meters",
+          "products": [
+            "Hemochroma HB Meter"
+          ]
+        }
+      ],
+      "direct_products": [
+        "CellScan 30 Analyzer",
+        "CellScan 50 Analyzer",
+        "CellScan 50s Analyzer",
+        "Hemochroma HB Meter"
+      ]
+    },
+    {
+      "id": "clinical-chemistry",
+      "name": "Clinical Chemistry",
+      "slug": "clinical-chemistry",
+      "url": "https://microbiology.co.ke/product-category/clinical-chemistry/",
+      "subcategories": [],
+      "direct_products": [
+        "CliniPak Semi Chemistry Analyzer",
+        "Core AutoChem Analyzer",
+        "Alcor AutoChem Analyzer",
+        "ST-200 Aqua Electrolyte Analyzer",
+        "Clinipak Clinical Chemistry Reagents",
+        "miniBio"
+      ]
+    },
+    {
+      "id": "immunoassay",
+      "name": "Immunoassay",
+      "slug": "immunoassay",
+      "url": "https://microbiology.co.ke/product-category/immunoassay/",
+      "subcategories": [
+        {
+          "id": "i-chroma-reagents",
+          "name": "I-Chroma Reagents",
+          "slug": "i-chroma-reagents",
+          "biomarker_groups": [
+            "Diabetes Biomarkers",
+            "Hormones Biomarkers",
+            "Infection Biomarkers",
+            "Autoimmune Biomarkers",
+            "Cancer Biomarkers",
+            "Cardiac Biomarkers",
+            "Other Biomarkers"
+          ],
+          "products": []
+        }
+      ],
+      "direct_products": [
+        "Ichroma II Reader",
+        "Ichroma III Reader"
+      ]
+    },
+    {
+      "id": "critical-care",
+      "name": "Critical Care",
+      "slug": "critical-care",
+      "url": "https://microbiology.co.ke/product-category/critical-care/",
+      "subcategories": [],
+      "direct_products": [
+        "Edan i15 Blood Gas Analyzer",
+        "Edan i15 Blood Gas Cartridge",
+        "Edan i15 Blood Gas Collection Syringes",
+        "Edan i15 Blood Controls"
+      ]
+    },
+    {
+      "id": "rapid-test-strips",
+      "name": "Rapid Test Strips",
+      "slug": "rapid-test-strips",
+      "url": "https://microbiology.co.ke/product-category/rapid-test-strips/",
+      "subcategories": [],
+      "direct_products": []
+    },
+    {
+      "id": "blood-sugar-testing",
+      "name": "Blood Sugar Testing",
+      "slug": "blood-sugar-testing",
+      "url": "https://microbiology.co.ke/product-category/blood-sugar-testing/",
+      "subcategories": [],
+      "direct_products": []
+    },
+    {
+      "id": "specimen-collections",
+      "name": "Specimen Collections",
+      "slug": "specimen-collections",
+      "url": "https://microbiology.co.ke/product-category/specimen-collections/",
+      "subcategories": [],
+      "direct_products": []
+    },
+    {
+      "id": "general-laboratory-equipments",
+      "name": "General Laboratory Equipments",
+      "slug": "general-laboratory-equipments",
+      "url": "https://microbiology.co.ke/product-category/general-laboratory-equipments/",
+      "subcategories": [],
+      "direct_products": []
+    }
+  ],
+  "stats": {
+    "top_level_categories": 8,
+    "subcategories": 5,
+    "known_products": 22,
+    "categories_with_unlisted_products": 4
+  }
+}

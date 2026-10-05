@@ -7,3 +7,11 @@
 html {
   scroll-behavior: smooth;
 }
+.pt-public-nav {
+  padding-top: 8.25rem;
+}
+@media (min-width: 768px) {
+  .pt-public-nav {
+    padding-top: 9.35rem;
+  }
+}
