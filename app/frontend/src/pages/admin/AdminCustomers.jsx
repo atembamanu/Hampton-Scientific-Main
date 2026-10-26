@@ -174,7 +174,7 @@ export const AdminCustomers = () => {
             {orgs.map((org) => (
               <AdminTableRow key={org.id}>
                 <AdminTableTd>
-                  <Link to={`/sysadmin/facilities/${org.id}`} className="font-semibold text-brand hover:text-copper hover:underline">
+                  <Link to={`/sysadmin/facilities/${org.id}`} className="font-semibold text-brand hover:text-brand hover:underline">
                     {org.name}
                   </Link>
                 </AdminTableTd>

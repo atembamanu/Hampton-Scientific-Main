@@ -152,7 +152,7 @@ export const RegisterFacilityModal = ({ open, onOpenChange, onSaved, initialReco
           <input required value={form.orgEmail} onChange={set('orgEmail')} type="email" className={fieldClass} />
           {liveEmailError(form.orgEmail) && <p className="text-xs text-red-600 mt-1">{liveEmailError(form.orgEmail)}</p>}
         </label>
-        <p className="text-xs uppercase tracking-[0.14em] text-copper font-semibold pt-2 sm:col-span-2 lg:col-span-3">Facility admin</p>
+        <p className="text-xs uppercase tracking-[0.14em] text-brand font-semibold pt-2 sm:col-span-2 lg:col-span-3">Facility admin</p>
         <label className="text-sm">
           <span className="block text-xs text-ink-muted mb-1">First name</span>
           <input required value={form.firstName} onChange={set('firstName')} className={fieldClass} />

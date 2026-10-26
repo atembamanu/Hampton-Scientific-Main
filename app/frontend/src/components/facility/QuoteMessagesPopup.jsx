@@ -57,8 +57,8 @@ const isImageAttachment = (attachment) => {
 
 const MessageAttachments = ({ attachments, mine }) => {
   if (!Array.isArray(attachments) || attachments.length === 0) return null;
-  const textCls = mine ? 'text-white/95' : 'text-copper';
-  const chipCls = mine ? 'bg-white/15 hover:bg-white/25' : 'bg-copper/10 hover:bg-copper/15';
+  const textCls = mine ? 'text-white/95' : 'text-brand';
+  const chipCls = mine ? 'bg-white/15 hover:bg-white/25' : 'bg-brand/10 hover:bg-brand/15';
   return (
     <div className={`mt-2 space-y-1.5 ${attachments.length && 'pt-0.5'}`}>
       {attachments.map((attachment, index) => {
@@ -289,7 +289,7 @@ export const QuoteMessagesPopup = ({
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="fixed z-[60] bottom-5 right-5 h-14 w-14 rounded-full bg-copper text-white shadow-[0_12px_32px_rgba(139,90,43,0.35)] hover:bg-copper/90 transition-colors inline-flex items-center justify-center"
+          className="fixed z-[60] bottom-5 right-5 h-14 w-14 rounded-full bg-brand text-white shadow-[0_12px_32px_rgba(139,90,43,0.35)] hover:bg-brand/90 transition-colors inline-flex items-center justify-center"
           aria-label="Open messages"
         >
           <span className="relative inline-flex h-full w-full items-center justify-center">
@@ -325,7 +325,7 @@ export const QuoteMessagesPopup = ({
             </div>
 
             <div className="px-5 pb-4 flex items-center gap-3 border-b border-ink/5">
-              <div className="h-11 w-11 rounded-full bg-copper/15 text-copper font-semibold text-sm inline-flex items-center justify-center shrink-0">
+              <div className="h-11 w-11 rounded-full bg-brand/15 text-brand font-semibold text-sm inline-flex items-center justify-center shrink-0">
                 {headerInitials}
               </div>
               <div className="min-w-0">
@@ -359,13 +359,13 @@ export const QuoteMessagesPopup = ({
                     return (
                       <div key={message.id} className={`flex ${mine ? 'justify-end' : 'justify-start'}`}>
                         <div className={`max-w-[82%] ${mine ? 'items-end' : 'items-start'} flex flex-col`}>
-                          <p className={`text-[11px] mb-0.5 ${mine ? 'text-right text-copper/80' : 'text-left text-ink-muted'}`}>
+                          <p className={`text-[11px] mb-0.5 ${mine ? 'text-right text-brand/80' : 'text-left text-ink-muted'}`}>
                             {label}
                           </p>
                           <div
                             className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${
                               mine
-                                ? 'bg-copper text-white rounded-br-md'
+                                ? 'bg-brand text-white rounded-br-md'
                                 : 'bg-white text-ink rounded-bl-md'
                             }`}
                           >
@@ -414,7 +414,7 @@ export const QuoteMessagesPopup = ({
                   {pending.map((item, index) => (
                     <span
                       key={`${item.url}-${index}`}
-                      className="inline-flex items-center gap-1 max-w-full rounded-full bg-copper/10 text-copper text-[11px] px-2 py-1"
+                      className="inline-flex items-center gap-1 max-w-full rounded-full bg-brand/10 text-brand text-[11px] px-2 py-1"
                     >
                       {item.type === 'link' ? <Link2 className="w-3 h-3 shrink-0" /> : <Paperclip className="w-3 h-3 shrink-0" />}
                       <span className="truncate max-w-[160px]">{item.name || item.url}</span>
@@ -448,7 +448,7 @@ export const QuoteMessagesPopup = ({
                     <button type="button" className="text-xs text-ink-muted" onClick={() => setLinkOpen(false)}>
                       Cancel
                     </button>
-                    <button type="button" className="text-xs font-medium text-copper" onClick={addLink}>
+                    <button type="button" className="text-xs font-medium text-brand" onClick={addLink}>
                       Add link
                     </button>
                   </div>
@@ -498,7 +498,7 @@ export const QuoteMessagesPopup = ({
                   type="button"
                   onClick={send}
                   disabled={!canSend}
-                  className="h-9 w-9 rounded-full bg-copper text-white inline-flex items-center justify-center disabled:opacity-40"
+                  className="h-9 w-9 rounded-full bg-brand text-white inline-flex items-center justify-center disabled:opacity-40"
                   aria-label="Send"
                 >
                   {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}

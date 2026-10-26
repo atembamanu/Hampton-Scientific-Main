@@ -257,14 +257,14 @@ export const TemplateQuoteCart = () => {
   return (
     <div className="min-h-screen pb-20 bg-cream">
       <div className="max-w-4xl mx-auto px-6 py-10">
-        <Link to="/products" className="inline-flex items-center gap-2 text-sm text-copper hover:underline mb-8">
+        <Link to="/products" className="inline-flex items-center gap-2 text-sm text-brand hover:underline mb-8">
           <ArrowLeft className="w-4 h-4" />
           Back to store
         </Link>
 
         <p className="editorial-label mb-3">Quote request</p>
         <h1 className="editorial-headline mb-2">
-          Your <span className="text-copper">quote</span>
+          Your <span className="text-brand">quote</span>
         </h1>
         <p className="text-ink-muted text-sm mb-10">
           {submitted
@@ -343,7 +343,7 @@ export const TemplateQuoteCart = () => {
             {showCheckout && checkoutStep === 'facility' && (
               <div className="editorial-panel p-6 space-y-5">
                 {isGuestSubmit && (
-                  <div className="rounded-2xl border border-copper/20 bg-copper/5 p-4">
+                  <div className="rounded-2xl border border-brand/20 bg-brand/5 p-4">
                     <p className="text-sm text-ink leading-relaxed">
                       Create a facility account with us for smoother quote and order processing.
                       Guest requests cannot be tracked online after submission.
@@ -408,7 +408,7 @@ export const TemplateQuoteCart = () => {
                             key={m.id}
                             type="button"
                             onClick={() => setDeliveryMode(m.id)}
-                            className={`px-3 py-1.5 rounded-full text-xs border ${deliveryMode === m.id ? 'border-copper bg-copper/10 text-copper' : 'border-ink/15'}`}
+                            className={`px-3 py-1.5 rounded-full text-xs border ${deliveryMode === m.id ? 'border-brand bg-brand/10 text-brand' : 'border-ink/15'}`}
                           >
                             {m.label}
                           </button>

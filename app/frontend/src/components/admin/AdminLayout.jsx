@@ -135,7 +135,7 @@ export const AdminLayout = () => {
                     className={({ isActive }) =>
                       `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
                         isActive
-                          ? 'bg-copper/10 text-copper font-medium'
+                          ? 'bg-brand/10 text-brand font-medium'
                           : 'text-ink-muted hover:text-ink hover:bg-ink/5'
                       }`
                     }
@@ -196,7 +196,7 @@ export const AdminLayout = () => {
           </button>
           <p className="text-sm text-ink-muted lg:hidden truncate min-w-0">Operations</p>
           <div className="flex-1 min-w-0" />
-          <Link to="/" className="text-xs text-copper hover:underline hidden sm:inline">
+          <Link to="/" className="text-xs text-brand hover:underline hidden sm:inline">
             View site
           </Link>
         </header>

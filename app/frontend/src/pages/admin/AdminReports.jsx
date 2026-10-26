@@ -56,7 +56,7 @@ const sortRows = (rows, sort) => [...rows].sort((a, b) => {
 
 const Metric = ({ label, value, hint }) => (
   <div className="editorial-panel p-5">
-    <p className="text-[10px] uppercase tracking-[0.16em] font-semibold text-copper">{label}</p>
+    <p className="text-[10px] uppercase tracking-[0.16em] font-semibold text-brand">{label}</p>
     <p className="text-2xl font-semibold tabular-nums mt-2 text-ink">{value}</p>
     {hint ? <p className="text-xs text-ink-muted mt-1">{hint}</p> : null}
   </div>
@@ -254,7 +254,7 @@ export const AdminReports = () => {
                 <AdminTableRow key={row.id}>
                   <AdminTableTd>
                     {row.organizationId ? (
-                      <Link to={`/sysadmin/facilities/${row.organizationId}`} className="font-medium text-brand hover:text-copper hover:underline">{row.name}</Link>
+                      <Link to={`/sysadmin/facilities/${row.organizationId}`} className="font-medium text-brand hover:text-brand hover:underline">{row.name}</Link>
                     ) : row.name}
                   </AdminTableTd>
                   <AdminTableTd>{row.county || '—'}</AdminTableTd>

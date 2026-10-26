@@ -8,7 +8,7 @@ export const Forbidden = () => {
   const home = facilityHomePath(user);
   return (
     <div className="editorial-panel p-10 text-center max-w-md mx-auto mt-12">
-      <ShieldX className="w-12 h-12 text-copper mx-auto mb-4" />
+      <ShieldX className="w-12 h-12 text-brand mx-auto mb-4" />
       <h1 className="text-xl font-bold text-ink mb-2">Access denied</h1>
       <p className="text-sm text-ink-muted mb-6">
         You don&apos;t have permission to view this page.

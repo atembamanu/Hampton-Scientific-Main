@@ -158,7 +158,7 @@ export const Orders = () => {
               {orders.map((o) => (
                 <tr key={o.id} className="border-b border-ink/5 hover:bg-ink/[0.02]">
                   <td className="px-5 py-3 font-medium">
-                    <Link to={`/dashboard/orders/${o.id}`} className="hover:text-copper hover:underline">{o.orderNumber}</Link>
+                    <Link to={`/dashboard/orders/${o.id}`} className="hover:text-brand hover:underline">{o.orderNumber}</Link>
                   </td>
                   <td className="px-5 py-3">{o.orderedForBranchName}</td>
                   <td className="px-5 py-3 text-ink-muted">{o.orderedByName}</td>

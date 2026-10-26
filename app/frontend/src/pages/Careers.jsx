@@ -41,7 +41,7 @@ export const Careers = () => {
               <li key={job.id}>
                 <Link
                   to={`/careers/${job.id}`}
-                  className="block editorial-panel hover:border-copper/30 transition-colors"
+                  className="block editorial-panel hover:border-brand/30 transition-colors"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div>
@@ -50,7 +50,7 @@ export const Careers = () => {
                         {[job.department, job.location, typeLabel(job.employment_type)].filter(Boolean).join(' · ')}
                       </p>
                     </div>
-                    <span className="text-xs font-medium text-copper self-start">View & apply</span>
+                    <span className="text-xs font-medium text-brand self-start">View & apply</span>
                   </div>
                 </Link>
               </li>

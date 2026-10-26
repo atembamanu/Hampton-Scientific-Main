@@ -66,7 +66,7 @@ export const ResetPassword = () => {
     return (
       <div className="min-h-screen bg-cream flex items-center justify-center px-6">
         <div className="editorial-panel p-8 text-center max-w-md">
-          <CheckCircle className="w-12 h-12 text-copper mx-auto mb-4" />
+          <CheckCircle className="w-12 h-12 text-brand mx-auto mb-4" />
           <h1 className="editorial-headline mb-2">Password updated</h1>
           <p className="text-sm text-ink-muted">Redirecting to sign in…</p>
         </div>
@@ -79,11 +79,11 @@ export const ResetPassword = () => {
       <div className="w-full max-w-md">
         <Link to="/" className="inline-block mb-6"><HamptonLogo size="small" /></Link>
         <p className="editorial-label mb-2">Account</p>
-        <h1 className="editorial-headline mb-8">New <span className="text-copper">password</span></h1>
+        <h1 className="editorial-headline mb-8">New <span className="text-brand">password</span></h1>
 
         <form onSubmit={handleSubmit} className="editorial-panel p-6 space-y-5">
           <div className="flex items-center gap-3 text-ink-muted text-sm">
-            <Lock className="w-4 h-4 text-copper" />
+            <Lock className="w-4 h-4 text-brand" />
             Choose a strong password for your account.
           </div>
           <EditorialField label="New password" required>

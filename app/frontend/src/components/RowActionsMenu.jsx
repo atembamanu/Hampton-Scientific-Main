@@ -20,7 +20,7 @@ export const RowActionsMenu = ({ items = [], align = 'end', label = 'More action
         <button
           type="button"
           aria-label={label}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-copper/40"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-ink-muted hover:bg-ink/5 hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40"
         >
           <MoreVertical className="h-4 w-4" />
         </button>
@@ -30,7 +30,7 @@ export const RowActionsMenu = ({ items = [], align = 'end', label = 'More action
           <DropdownMenuItem
             key={item.label}
             disabled={item.disabled}
-            className="w-full cursor-pointer rounded-none px-3 py-2 text-sm text-ink hover:bg-copper/15 hover:text-copper focus:bg-copper/15 focus:text-copper"
+            className="w-full cursor-pointer rounded-none px-3 py-2 text-sm text-ink hover:bg-brand/15 hover:text-brand focus:bg-brand/15 focus:text-brand"
             onSelect={(event) => {
               if (item.disabled) {
                 event.preventDefault();

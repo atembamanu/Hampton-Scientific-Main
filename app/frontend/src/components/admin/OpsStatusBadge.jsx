@@ -21,7 +21,7 @@ const STYLES = {
   dispatched: 'bg-indigo-50 text-indigo-800 border-indigo-200',
   out_for_delivery: 'bg-purple-50 text-purple-800 border-purple-200',
   delivered: 'bg-emerald-50 text-emerald-800 border-emerald-200',
-  order_placed: 'bg-copper/10 text-copper border-copper/20',
+  order_placed: 'bg-brand/10 text-brand border-brand/20',
   none: 'bg-gray-50 text-gray-500 border-gray-200',
 };
 

@@ -50,7 +50,7 @@ export const ProductDetail = () => {
       <div className="min-h-screen pb-16 flex items-center justify-center bg-cream">
         <div className="text-center px-6">
           <h1 className="text-xl font-bold text-ink mb-2">Product not found</h1>
-          <Link to="/products" className="text-sm text-copper hover:underline">Back to store</Link>
+          <Link to="/products" className="text-sm text-brand hover:underline">Back to store</Link>
         </div>
       </div>
     );

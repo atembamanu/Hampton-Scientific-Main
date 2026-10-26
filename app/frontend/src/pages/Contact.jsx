@@ -13,10 +13,10 @@ import { useLiveCatalog } from '../utils/liveCatalog';
 import { SheetTabs } from '../components/ui/SheetTabs';
 
 const inputClass =
-  'w-full border border-ink/10 rounded-xl px-4 py-3 text-sm text-ink placeholder:text-ink-faint/70 focus:outline-none focus:border-copper/40 focus:ring-1 focus:ring-copper/20 bg-white transition-colors';
+  'w-full border border-ink/10 rounded-xl px-4 py-3 text-sm text-ink placeholder:text-ink-faint/70 focus:outline-none focus:border-brand/40 focus:ring-1 focus:ring-brand/20 bg-white transition-colors';
 
 const categoryTriggerClass =
-  'form-field !h-auto min-h-[46px] rounded-[4px] border border-ink/10 px-4 py-3 bg-white focus:outline-none focus:border-copper/40 focus:ring-1 focus:ring-copper/20';
+  'form-field !h-auto min-h-[46px] rounded-[4px] border border-ink/10 px-4 py-3 bg-white focus:outline-none focus:border-brand/40 focus:ring-1 focus:ring-brand/20';
 
 const tabs = [
   { id: 'contact', label: 'General inquiry' },
@@ -178,12 +178,12 @@ export const Contact = () => {
           <div className="lg:col-span-2 lg:sticky lg:top-28 lg:self-start">
             <div className="flex items-center gap-3 mb-6">
               <span className="editorial-label">Contact</span>
-              <span className="w-8 h-px bg-copper" />
+              <span className="w-8 h-px bg-brand" />
               <span className="editorial-label">We respond within 24h</span>
             </div>
             <h1 className="editorial-headline mb-6">
               Let&apos;s talk about your{' '}
-              <span className="text-copper">facility</span>.
+              <span className="text-brand">facility</span>.
             </h1>
             <p className="text-ink-muted text-sm leading-relaxed mb-10 max-w-sm">
               Whether you need equipment, training, or have questions — our team is ready to assist you.
@@ -195,7 +195,7 @@ export const Contact = () => {
                   <dt className="editorial-label mb-2">Location</dt>
                   <dd className="text-ink-muted leading-relaxed">
                     {info.googleMapsUrl ? (
-                      <a href={info.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-ink hover:text-copper transition-colors">
+                      <a href={info.googleMapsUrl} target="_blank" rel="noopener noreferrer" className="text-ink hover:text-brand transition-colors">
                         {info.address}
                       </a>
                     ) : (
@@ -210,7 +210,7 @@ export const Contact = () => {
                 <div className="editorial-accent-border">
                   <dt className="editorial-label mb-2">Phone</dt>
                   <dd>
-                    <a href={`tel:${phoneHref}`} className="text-ink hover:text-copper transition-colors">
+                    <a href={`tel:${phoneHref}`} className="text-ink hover:text-brand transition-colors">
                       {info.phone}
                     </a>
                     {info.workingHours ? (
@@ -223,7 +223,7 @@ export const Contact = () => {
                 <div className="editorial-accent-border">
                   <dt className="editorial-label mb-2">Email</dt>
                   <dd>
-                    <a href={`mailto:${info.email}`} className="text-ink hover:text-copper transition-colors break-all">
+                    <a href={`mailto:${info.email}`} className="text-ink hover:text-brand transition-colors break-all">
                       {info.email}
                     </a>
                   </dd>
@@ -233,7 +233,7 @@ export const Contact = () => {
                 <div className="editorial-accent-border">
                   <dt className="editorial-label mb-2">Website</dt>
                   <dd>
-                    <a href={webHref} target="_blank" rel="noopener noreferrer" className="text-ink hover:text-copper transition-colors break-all">
+                    <a href={webHref} target="_blank" rel="noopener noreferrer" className="text-ink hover:text-brand transition-colors break-all">
                       {websiteLabel(info.website)}
                     </a>
                   </dd>
@@ -242,9 +242,9 @@ export const Contact = () => {
             </dl>
 
             <div className="mt-10 pt-8 section-divider flex flex-wrap gap-4 text-xs">
-              <Link to="/products" className="text-ink-muted hover:text-copper transition-colors">Browse store</Link>
-              <Link to="/quote-cart" className="text-ink-muted hover:text-copper transition-colors">Quote cart</Link>
-              <Link to="/training" className="text-ink-muted hover:text-copper transition-colors">Training & service</Link>
+              <Link to="/products" className="text-ink-muted hover:text-brand transition-colors">Browse store</Link>
+              <Link to="/quote-cart" className="text-ink-muted hover:text-brand transition-colors">Quote cart</Link>
+              <Link to="/training" className="text-ink-muted hover:text-brand transition-colors">Training & service</Link>
             </div>
           </div>
 
@@ -286,7 +286,7 @@ export const Contact = () => {
                 <form onSubmit={handleQuoteSubmit} className="space-y-5">
                   <p className="text-xs text-ink-muted">
                     Or{' '}
-                    <Link to="/quote-cart" className="text-copper hover:underline">review items in your quote cart</Link>.
+                    <Link to="/quote-cart" className="text-brand hover:underline">review items in your quote cart</Link>.
                   </p>
                   <div className="grid sm:grid-cols-2 gap-5">
                     <EditorialField label="Facility name" required>
@@ -382,7 +382,7 @@ export const Contact = () => {
             <p className="editorial-label mb-4">Newsletter</p>
             {newsletterResult?.status === 'already_subscribed' ? (
               <div className="rounded-[4px] border border-ink/10 bg-white px-8 py-10 sm:px-10 text-left shadow-[0_1px_0_rgba(26,26,26,0.04)]">
-                <p className="editorial-label text-copper mb-3">Already subscribed</p>
+                <p className="editorial-label text-brand mb-3">Already subscribed</p>
                 <h2 className="text-2xl font-bold tracking-tight text-ink mb-3">
                   You&apos;re already on our list
                 </h2>

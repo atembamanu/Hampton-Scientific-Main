@@ -30,7 +30,7 @@ export const FacilityProductRow = ({ product, detailBase = '/dashboard/products'
 
         <p className="text-[10px] text-ink-faint uppercase tracking-wider mb-0.5">{product.category}</p>
 
-        <h3 className="font-semibold text-ink text-sm leading-snug group-hover:text-copper transition-colors line-clamp-2">
+        <h3 className="font-semibold text-ink text-sm leading-snug group-hover:text-brand transition-colors line-clamp-2">
 
           {product.name}
 

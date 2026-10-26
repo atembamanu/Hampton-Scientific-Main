@@ -23,10 +23,10 @@ export const Footer = () => {
           <div>
             <p className="editorial-label mb-3">Catalogue</p>
             <ul className="space-y-1.5 text-ink-muted">
-              <li><Link to="/products" className="hover:text-copper">All products</Link></li>
+              <li><Link to="/products" className="hover:text-brand">All products</Link></li>
               {footerCategories.map((category) => (
                 <li key={category.category_id}>
-                  <Link to={`/products?category=${category.slug}`} className="hover:text-copper">{category.name}</Link>
+                  <Link to={`/products?category=${category.slug}`} className="hover:text-brand">{category.name}</Link>
                 </li>
               ))}
             </ul>
@@ -34,13 +34,15 @@ export const Footer = () => {
           <div>
             <p className="editorial-label mb-3">Company</p>
             <ul className="space-y-1.5 text-ink-muted">
-              <li><Link to="/about" className="hover:text-copper">About us</Link></li>
-              <li><Link to="/order-management" className="hover:text-copper">Order management</Link></li>
-              <li><Link to="/training" className="hover:text-copper">Training & Service</Link></li>
-              <li><Link to="/careers" className="hover:text-copper">Careers</Link></li>
-              <li><Link to="/contact" className="hover:text-copper">Contact us</Link></li>
-              <li><Link to="/login" className="hover:text-copper">Facility sign in</Link></li>
-              <li><Link to="/register" className="hover:text-copper">Register your facility</Link></li>
+              <li><Link to="/about" className="hover:text-brand">About us</Link></li>
+              <li><Link to="/partners" className="hover:text-brand">Our partners</Link></li>
+              <li><Link to="/order-management" className="hover:text-brand">Order management</Link></li>
+              <li><Link to="/training" className="hover:text-brand">Training & Service</Link></li>
+              <li><Link to="/careers" className="hover:text-brand">Careers</Link></li>
+              <li><Link to="/contact" className="hover:text-brand">Contact us</Link></li>
+              <li><Link to="/privacy" className="hover:text-brand">Privacy &amp; cookies</Link></li>
+              <li><Link to="/login" className="hover:text-brand">Facility sign in</Link></li>
+              <li><Link to="/register" className="hover:text-brand">Register your facility</Link></li>
             </ul>
           </div>
           <div>
@@ -49,14 +51,14 @@ export const Footer = () => {
               {contact.address && <li>{contact.address}</li>}
               {contact.poBox && <li>{contact.poBox}</li>}
               {contact.phone && (
-                <li><a href={`tel:${phoneHref}`} className="hover:text-copper">{contact.phone}</a></li>
+                <li><a href={`tel:${phoneHref}`} className="hover:text-brand">{contact.phone}</a></li>
               )}
               {contact.email && (
-                <li><a href={`mailto:${contact.email}`} className="hover:text-copper">{contact.email}</a></li>
+                <li><a href={`mailto:${contact.email}`} className="hover:text-brand">{contact.email}</a></li>
               )}
               {webHref && (
                 <li>
-                  <a href={webHref} target="_blank" rel="noopener noreferrer" className="hover:text-copper">
+                  <a href={webHref} target="_blank" rel="noopener noreferrer" className="hover:text-brand">
                     {websiteLabel(contact.website)}
                   </a>
                 </li>
@@ -67,8 +69,10 @@ export const Footer = () => {
         </div>
       </div>
       <div className="border-t border-ink/5">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 text-[11px] text-ink-faint">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 text-[11px] text-ink-faint flex flex-wrap items-center gap-x-4 gap-y-1">
           <p>© {new Date().getFullYear()} {contact.companyName || 'Hampton Scientific'}</p>
+          <Link to="/privacy" className="hover:text-brand">Privacy</Link>
+          <Link to="/privacy#cookies" className="hover:text-brand">Cookies</Link>
         </div>
       </div>
     </footer>

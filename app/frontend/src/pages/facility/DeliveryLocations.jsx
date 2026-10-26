@@ -134,7 +134,7 @@ export const DeliveryLocations = () => {
             <div key={loc.id} className="editorial-panel p-5">
               <div className="flex justify-between items-start mb-2">
                 <p className="font-semibold text-ink">{loc.label}</p>
-                {loc.isDefault && <span className="text-[10px] text-copper uppercase">Default</span>}
+                {loc.isDefault && <span className="text-[10px] text-brand uppercase">Default</span>}
               </div>
               <p className="text-sm text-ink-muted">{loc.addressLine}</p>
               {loc.county && <p className="text-xs text-ink-faint mt-1">{loc.county}</p>}

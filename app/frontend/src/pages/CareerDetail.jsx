@@ -9,7 +9,7 @@ import { API_URL } from '../config/apiBaseUrl';
 import { emailError, liveEmailError, livePhoneError, phoneError, invalidFieldClass } from '../utils/validation';
 
 const inputClass =
-  'w-full border border-ink/10 rounded-xl px-4 py-3 text-sm text-ink placeholder:text-ink-faint/70 focus:outline-none focus:border-copper/40 focus:ring-1 focus:ring-copper/20 bg-white transition-colors';
+  'w-full border border-ink/10 rounded-xl px-4 py-3 text-sm text-ink placeholder:text-ink-faint/70 focus:outline-none focus:border-brand/40 focus:ring-1 focus:ring-brand/20 bg-white transition-colors';
 
 const typeLabel = (value) => ({
   'full-time': 'Full time',
@@ -87,7 +87,7 @@ export const CareerDetail = () => {
   return (
     <div className="min-h-screen pb-20 bg-cream">
       <div className="max-w-6xl mx-auto px-6 py-12">
-        <Link to="/careers" className="text-xs text-ink-muted hover:text-copper">← All careers</Link>
+        <Link to="/careers" className="text-xs text-ink-muted hover:text-brand">← All careers</Link>
         <div className="grid lg:grid-cols-5 gap-12 lg:gap-16 mt-8">
           <div className="lg:col-span-3">
             <p className="editorial-label mb-3">

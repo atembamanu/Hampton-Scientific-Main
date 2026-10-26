@@ -82,7 +82,7 @@ export const FacilityProfile = () => {
           </form>
 
           <p className="text-sm text-ink-muted mt-6">
-            <Link to="/forgot-password" className="text-copper hover:underline">Reset your password</Link>
+            <Link to="/forgot-password" className="text-brand hover:underline">Reset your password</Link>
             {' '}via email if needed.
           </p>
         </>

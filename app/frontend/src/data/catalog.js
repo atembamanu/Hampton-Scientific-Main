@@ -12,7 +12,7 @@ const PLACEHOLDER = {
 export const contactInfo = {
   address: 'Ushuru Pension Plaza, Muthangari Drive Block C, First Floor',
   poBox: 'P.O. Box 162 - 00517 Westlands, Nairobi',
-  phone: '0717 023 814',
+  phone: '0722 792 835',
   email: 'info@hamptonscientific.com',
   website: 'www.hamptonscientific.com',
   workingHours: 'Mon - Fri: 8:00 AM - 5:00 PM EAT',
@@ -267,7 +267,28 @@ export const stats = [
   { value: '300+', label: 'Youths Empowered' },
 ];
 
-export const partners = ['Mindray', 'Omron', 'Haier', 'Sysmex', 'Abbott', 'Roche'];
+export const partners = [
+  'Angelantoni',
+  'Astell',
+  'Agilent',
+  'ABDOS',
+  'Bio-Rad',
+  'Capricorn',
+  'Copan',
+  'Eppendorf',
+  'Nippon Genetics',
+  'Metrohm',
+  'Neogen',
+  'Novasina',
+  'Testo',
+  'ELGA',
+  'Erlab',
+  'Illumina',
+  'Telstar',
+  'VELP',
+  'Memmert',
+  'Norgen',
+];
 
 export const projects = [
   { title: 'Laboratory Equipment — Nairobi Hospital', date: '28/07/2025', image: PLACEHOLDER.lab },

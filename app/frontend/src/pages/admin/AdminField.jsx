@@ -243,7 +243,7 @@ export const AdminField = () => {
             {openVisit && (
               <p className="text-ink-muted mt-1">
                 Open visit at{' '}
-                <Link to={`/sysadmin/field/${openVisit.prospectId}`} className="text-copper hover:underline">
+                <Link to={`/sysadmin/field/${openVisit.prospectId}`} className="text-brand hover:underline">
                   {openVisit.facilityName}
                 </Link>
                 {' '}since {formatDateTime(openVisit.checkedInAt)}. End it before you check out.
@@ -385,7 +385,7 @@ export const AdminField = () => {
               {rows.map((row) => (
                 <AdminTableRow key={row.id}>
                   <AdminTableTd>
-                    <Link to={`/sysadmin/field/${row.id}`} className="font-medium text-copper hover:underline">
+                    <Link to={`/sysadmin/field/${row.id}`} className="font-medium text-brand hover:underline">
                       {row.facilityName}
                     </Link>
                   </AdminTableTd>

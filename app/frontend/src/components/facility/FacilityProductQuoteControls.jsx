@@ -139,7 +139,7 @@ export const FacilityProductQuoteControls = ({ product }) => {
 
           placeholder="Add a note (e.g. preferred brand or specification)"
 
-          className="w-full bg-white border border-ink/10 rounded-lg px-3 py-2 text-xs text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-copper/40"
+          className="w-full bg-white border border-ink/10 rounded-lg px-3 py-2 text-xs text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-brand/40"
 
         />
 

@@ -43,7 +43,7 @@ export const FacilityProducts = () => {
             <button
               type="button"
               onClick={() => setCategory('all')}
-              className={`text-left text-sm py-2 px-3 rounded-lg ${!searchParams.get('category') ? 'bg-copper/10 text-copper font-medium' : 'text-ink-muted hover:text-ink'}`}
+              className={`text-left text-sm py-2 px-3 rounded-lg ${!searchParams.get('category') ? 'bg-brand/10 text-brand font-medium' : 'text-ink-muted hover:text-ink'}`}
             >
               All products
             </button>
@@ -53,7 +53,7 @@ export const FacilityProducts = () => {
                 type="button"
                 onClick={() => setCategory(category.slug)}
                 className={`text-left text-sm py-2 px-3 rounded-lg w-full ${
-                  categoryParam === category.slug ? 'text-copper bg-copper/10 font-medium' : 'text-ink-muted hover:text-ink'
+                  categoryParam === category.slug ? 'text-brand bg-brand/10 font-medium' : 'text-ink-muted hover:text-ink'
                 }`}
               >
                 {category.name}
@@ -72,7 +72,7 @@ export const FacilityProducts = () => {
                   placeholder="Search products…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-white border border-ink/10 rounded-full pl-11 pr-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-copper/40"
+                  className="w-full bg-white border border-ink/10 rounded-full pl-11 pr-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand/40"
                 />
               </div>
               <FacilityResetFilters

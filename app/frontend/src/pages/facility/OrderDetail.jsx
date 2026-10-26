@@ -50,7 +50,7 @@ export const OrderDetail = () => {
 
   return (
     <div className="pb-24">
-      <Link to="/dashboard/orders" className="inline-flex items-center gap-2 text-sm text-copper hover:underline mb-6">
+      <Link to="/dashboard/orders" className="inline-flex items-center gap-2 text-sm text-brand hover:underline mb-6">
         <ArrowLeft className="w-4 h-4" /> Back to orders
       </Link>
 
@@ -132,7 +132,7 @@ export const OrderDetail = () => {
               <th className="px-5 py-3">Product</th>
               <th className="px-5 py-3 text-right">Qty</th>
               <th className="px-5 py-3 text-right">List Price</th>
-              <th className="px-5 py-3 text-right text-copper">Agreed Price</th>
+              <th className="px-5 py-3 text-right text-brand">Agreed Price</th>
               <th className="px-5 py-3 text-right">Total</th>
             </tr>
           </thead>
@@ -148,7 +148,7 @@ export const OrderDetail = () => {
                   </td>
                   <td className="px-5 py-3 text-right">{item.quantity}</td>
                   <td className="px-5 py-3 text-right text-ink-muted">{list > 0 ? formatPrice(list) : '—'}</td>
-                  <td className="px-5 py-3 text-right font-semibold text-copper">{formatPrice(agreed)}</td>
+                  <td className="px-5 py-3 text-right font-semibold text-brand">{formatPrice(agreed)}</td>
                   <td className="px-5 py-3 text-right font-medium">{formatPrice(lineTotal(agreed, item.quantity))}</td>
                 </tr>
               );

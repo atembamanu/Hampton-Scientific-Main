@@ -76,7 +76,7 @@ export const AdminFieldDetail = () => {
 
   return (
     <div className="w-full min-w-0">
-      <Link to="/sysadmin/field" className="inline-flex items-center gap-2 text-sm text-copper hover:underline mb-4">
+      <Link to="/sysadmin/field" className="inline-flex items-center gap-2 text-sm text-brand hover:underline mb-4">
         <ArrowLeft className="w-4 h-4" /> Back to field
       </Link>
       <p className="editorial-label mb-2">Field</p>
@@ -88,13 +88,13 @@ export const AdminFieldDetail = () => {
             {' · '}
             {prospect.registered ? 'Registered' : 'Walk-in'}
           </p>
-          {prospect.outsideTerritory ? <p className="text-xs text-copper mt-1">{marker}</p> : null}
+          {prospect.outsideTerritory ? <p className="text-xs text-brand mt-1">{marker}</p> : null}
           {!isOwner && prospect.agentName ? <p className="text-xs text-ink-muted mt-1">{prospect.agentName}</p> : null}
           {prospect.registered && prospect.organizationName ? (
             <p className="text-sm mt-2">
               Responsible for{' '}
               {user?.role === 'sales' ? prospect.organizationName : (
-                <Link to={`/sysadmin/facilities/${prospect.organizationId}`} className="text-copper hover:underline">
+                <Link to={`/sysadmin/facilities/${prospect.organizationId}`} className="text-brand hover:underline">
                   {prospect.organizationName}
                 </Link>
               )}

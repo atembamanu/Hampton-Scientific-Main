@@ -71,7 +71,7 @@ export const NewsletterUnsubscribe = () => {
                   )}
                 </button>
                 <p className="mt-6 text-center text-sm">
-                  <Link to="/contact" className="text-ink-muted hover:text-copper transition-colors">
+                  <Link to="/contact" className="text-ink-muted hover:text-brand transition-colors">
                     Keep my subscription
                   </Link>
                 </p>
@@ -93,7 +93,7 @@ export const NewsletterUnsubscribe = () => {
                 </Link>
                 <p className="mt-6 text-center text-sm text-ink-muted">
                   Changed your mind?{' '}
-                  <Link to="/contact" className="text-copper hover:underline">
+                  <Link to="/contact" className="text-brand hover:underline">
                     Subscribe again
                   </Link>
                 </p>
@@ -102,7 +102,7 @@ export const NewsletterUnsubscribe = () => {
 
             {(status === 'error' || status === 'invalid') && (
               <>
-                <p className="editorial-label text-copper mb-3">Unable to continue</p>
+                <p className="editorial-label text-brand mb-3">Unable to continue</p>
                 <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink mb-4">
                   Link not valid
                 </h1>

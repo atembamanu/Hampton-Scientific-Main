@@ -225,7 +225,7 @@ export const AdminCareers = () => {
                 <AdminTableTd nowrap>
                   <button
                     type="button"
-                    className="text-brand font-medium hover:text-copper hover:underline"
+                    className="text-brand font-medium hover:text-brand hover:underline"
                     onClick={() => openApplications(job)}
                   >
                     {job.application_count || 0}
@@ -279,7 +279,7 @@ export const AdminCareers = () => {
                     <AdminTableTd>
                       <Link
                         to={`/sysadmin/careers/applications/${row.id}`}
-                        className="font-semibold text-brand hover:text-copper hover:underline"
+                        className="font-semibold text-brand hover:text-brand hover:underline"
                       >
                         {row.name}
                       </Link>

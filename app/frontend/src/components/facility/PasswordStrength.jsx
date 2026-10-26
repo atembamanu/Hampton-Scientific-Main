@@ -22,17 +22,17 @@ export const PasswordStrength = ({ password }) => {
           <div
             key={i}
             className={`h-1 flex-1 rounded-full transition-colors ${
-              score >= i ? 'bg-copper' : 'bg-ink/10'
+              score >= i ? 'bg-brand' : 'bg-ink/10'
             }`}
           />
         ))}
       </div>
       <p className="text-xs text-ink-muted">{label}</p>
       <ul className="text-[11px] text-ink-faint space-y-0.5">
-        <li className={checks.length ? 'text-copper' : ''}>At least 8 characters</li>
-        <li className={checks.upper ? 'text-copper' : ''}>One uppercase letter</li>
-        <li className={checks.lower ? 'text-copper' : ''}>One lowercase letter</li>
-        <li className={checks.number ? 'text-copper' : ''}>One number</li>
+        <li className={checks.length ? 'text-brand' : ''}>At least 8 characters</li>
+        <li className={checks.upper ? 'text-brand' : ''}>One uppercase letter</li>
+        <li className={checks.lower ? 'text-brand' : ''}>One lowercase letter</li>
+        <li className={checks.number ? 'text-brand' : ''}>One number</li>
       </ul>
     </div>
   );

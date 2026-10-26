@@ -44,11 +44,11 @@ const INVOICE_KEYS = new Set(['outstanding_invoices', 'awaiting_payment_invoices
 const OPS_ONLY_KEYS = new Set(['orders_requiring_fulfilment', 'deliveries_in_progress']);
 
 const StatCard = ({ icon: Icon, label, value, to }) => (
-  <Link to={to} className="editorial-panel p-5 hover:border-copper/30 transition-colors block group">
-    <Icon className="w-5 h-5 text-copper mb-3" />
+  <Link to={to} className="editorial-panel p-5 hover:border-brand/30 transition-colors block group">
+    <Icon className="w-5 h-5 text-brand mb-3" />
     <p className="text-2xl font-bold text-ink">{value ?? 0}</p>
     <p className="text-xs text-ink-muted mt-1">{label}</p>
-    <p className="text-[11px] text-copper font-medium mt-3 inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+    <p className="text-[11px] text-brand font-medium mt-3 inline-flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
       Open <ArrowRight className="w-3 h-3" />
     </p>
   </Link>
@@ -72,7 +72,7 @@ const QueuePanel = ({ title, accent, items, stats }) => (
               </span>
               <span className="text-ink-muted group-hover:text-ink transition-colors">{item.label}</span>
             </span>
-            <ArrowRight className="w-4 h-4 text-ink-faint group-hover:text-copper transition-colors" />
+            <ArrowRight className="w-4 h-4 text-ink-faint group-hover:text-brand transition-colors" />
           </Link>
         </li>
       ))}
@@ -128,7 +128,7 @@ export const OpsDashboard = () => {
         Welcome back{adminUser?.firstName ? `, ${adminUser.firstName}` : ''}
       </p>
       <h1 className="app-page-title mb-2">
-        {isSales ? 'Sales' : 'Operations'} <span className="text-copper">dashboard</span>
+        {isSales ? 'Sales' : 'Operations'} <span className="text-brand">dashboard</span>
       </h1>
       <p className="text-sm text-ink-muted mb-8 max-w-2xl">
         {isSales
@@ -151,7 +151,7 @@ export const OpsDashboard = () => {
       <div className="grid lg:grid-cols-2 gap-6">
         <QueuePanel
           title={`Action required · ${actionTotal}`}
-          accent="text-copper"
+          accent="text-brand"
           items={actionItems}
           stats={s}
         />

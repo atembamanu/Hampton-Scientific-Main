@@ -582,7 +582,7 @@ export const AdminProducts = () => {
                     <button
                       type="button"
                       onClick={() => openEdit(p)}
-                      className="font-semibold text-brand hover:text-copper hover:underline text-left truncate"
+                      className="font-semibold text-brand hover:text-brand hover:underline text-left truncate"
                     >
                       {p.name}
                     </button>
@@ -598,7 +598,7 @@ export const AdminProducts = () => {
                 <AdminTableTd nowrap className="text-ink-muted">{formatDate(p.created_at)}</AdminTableTd>
                 <AdminTableTd nowrap className="text-ink-muted">{formatDate(p.updated_at)}</AdminTableTd>
                 <AdminTableTd nowrap className="text-right">
-                  <button type="button" onClick={() => openEdit(p)} className="text-xs text-copper hover:underline mr-3 inline-flex items-center gap-1">
+                  <button type="button" onClick={() => openEdit(p)} className="text-xs text-brand hover:underline mr-3 inline-flex items-center gap-1">
                     <Pencil className="w-3 h-3" /> Edit
                   </button>
                   <button type="button" onClick={() => handleDelete(p)} className="text-xs text-ink-muted hover:underline inline-flex items-center gap-1">

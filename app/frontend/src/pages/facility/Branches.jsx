@@ -167,17 +167,17 @@ export const Branches = () => {
             <tbody>
               {visibleBranches.map((b) => (
                 <tr key={b.id} className="border-b border-ink/5">
-                  <td className="px-5 py-3 font-medium">{b.name}{b.isMain && <span className="ml-2 text-[10px] text-copper">MAIN</span>}</td>
+                  <td className="px-5 py-3 font-medium">{b.name}{b.isMain && <span className="ml-2 text-[10px] text-brand">MAIN</span>}</td>
                   <td className="px-5 py-3 text-ink-muted">{b.branchCode}</td>
                   <td className="px-5 py-3 text-ink-muted">{b.county || '—'}</td>
                   <td className="px-5 py-3"><StatusBadge status={b.status} /></td>
                   <td className="px-5 py-3 text-right space-x-3">
-                    <button type="button" onClick={() => openEdit(b)} className="text-xs text-copper hover:underline">Edit</button>
+                    <button type="button" onClick={() => openEdit(b)} className="text-xs text-brand hover:underline">Edit</button>
                     {!b.isMain && (
                       b.status === 'active' ? (
                         <button type="button" onClick={() => setDeactivateId(b.id)} className="text-xs text-red-600 hover:underline">Deactivate</button>
                       ) : (
-                        <button type="button" onClick={() => toggleStatus(b.id, true)} className="text-xs text-copper hover:underline">Activate</button>
+                        <button type="button" onClick={() => toggleStatus(b.id, true)} className="text-xs text-brand hover:underline">Activate</button>
                       )
                     )}
                   </td>

@@ -199,7 +199,7 @@ export const AdminOrders = () => {
             {orders.map((o) => (
               <AdminTableRow key={o.id}>
                 <AdminTableTd nowrap>
-                  <Link to={`/sysadmin/orders/${o.id}`} className="font-semibold text-brand hover:text-copper hover:underline">{o.orderNumber}</Link>
+                  <Link to={`/sysadmin/orders/${o.id}`} className="font-semibold text-brand hover:text-brand hover:underline">{o.orderNumber}</Link>
                   <p className="text-xs text-ink-faint mt-0.5">                    {o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ''}</p>
                 </AdminTableTd>
                 <AdminTableTd>

@@ -19,19 +19,19 @@ body {
     --card-foreground: 0 0% 10%;
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
-    --primary: 0 0% 10%;
-    --primary-foreground: 0 0% 98%;
+    --primary: 150 100% 19%;
+    --primary-foreground: 0 0% 100%;
     --secondary: 40 10% 94%;
     --secondary-foreground: 0 0% 10%;
     --muted: 40 10% 94%;
     --muted-foreground: 0 0% 42%;
-    --accent: 20 50% 53%;
+    --accent: 150 100% 19%;
     --accent-foreground: 0 0% 100%;
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 40 10% 88%;
     --input: 40 10% 88%;
-    --ring: 20 50% 53%;
+    --ring: 150 100% 19%;
     --radius: 0.75rem;
   }
 }
@@ -47,7 +47,7 @@ body {
     @apply text-[11px] font-medium uppercase tracking-[0.2em] text-ink-faint;
   }
   .btn-primary {
-    @apply inline-flex items-center justify-center bg-ink text-white text-sm font-medium px-6 py-3 hover:bg-ink/90 transition-colors;
+    @apply inline-flex items-center justify-center bg-brand text-white text-sm font-medium px-6 py-3 hover:bg-brand-dark transition-colors;
     border-radius: 25px;
   }
   .btn-secondary {
@@ -55,11 +55,11 @@ body {
     border-radius: 25px;
   }
   .btn-store {
-    @apply inline-flex items-center justify-center bg-copper text-white text-sm font-medium px-6 py-3 hover:bg-copper-dark transition-colors gap-2;
+    @apply inline-flex items-center justify-center bg-brand text-white text-sm font-medium px-6 py-3 hover:bg-brand-dark transition-colors gap-2;
     border-radius: 25px;
   }
   .btn-store-outline {
-    @apply inline-flex items-center justify-center border border-ink/15 bg-white text-ink text-sm font-medium px-6 py-3 hover:bg-ink/5 transition-colors gap-2;
+    @apply inline-flex items-center justify-center border border-brand/25 bg-white text-brand text-sm font-medium px-6 py-3 hover:bg-brand-muted transition-colors gap-2;
     border-radius: 25px;
   }
   .section-divider {
@@ -69,13 +69,13 @@ body {
     @apply bg-white/80 border border-ink/10 rounded-2xl p-6 sm:p-8;
   }
   .editorial-accent-border {
-    @apply border-l-2 border-copper pl-5 sm:pl-6;
+    @apply border-l-2 border-brand pl-5 sm:pl-6;
   }
   .editorial-serif {
     @apply font-serif text-ink leading-snug;
   }
   .editorial-tab-active {
-    @apply text-copper relative after:absolute after:-bottom-2 after:left-0 after:right-0 after:h-px after:bg-copper;
+    @apply text-brand relative after:absolute after:-bottom-2 after:left-0 after:right-0 after:h-px after:bg-brand;
   }
 }
 
@@ -569,5 +569,39 @@ button.gallery-thumb {
   .om-reveal-delay,
   .om-fade-key {
     animation: none !important;
+  }
+}
+
+/* Infinite partner logo marquee */
+.partner-marquee {
+  mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 6%, #000 94%, transparent);
+}
+
+.partner-marquee-track {
+  animation: partner-marquee-scroll 55s linear infinite;
+}
+
+.partner-marquee:hover .partner-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes partner-marquee-scroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .partner-marquee-track {
+    animation: none;
+    flex-wrap: wrap;
+    width: 100% !important;
+    max-width: 72rem;
+    margin-inline: auto;
+    justify-content: center;
   }
 }

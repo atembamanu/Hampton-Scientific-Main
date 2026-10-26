@@ -49,8 +49,8 @@ export const FacilityResetFilters = ({ disabled, onReset }) => (
 );
 
 const MetaStat = ({ label, value }) => (
-  <div className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-copper/15 via-copper/10 to-ink/[0.04] border border-copper/25 px-4 py-2 shadow-[0_8px_24px_rgba(139,90,43,0.12)]">
-    <span className="text-[10px] uppercase tracking-[0.16em] font-semibold text-copper">
+  <div className="inline-flex items-center gap-3 rounded-2xl bg-gradient-to-r from-brand/15 via-brand/10 to-ink/[0.04] border border-brand/25 px-4 py-2 shadow-[0_8px_24px_rgba(139,90,43,0.12)]">
+    <span className="text-[10px] uppercase tracking-[0.16em] font-semibold text-brand">
       {label}
     </span>
     <span className="text-xl font-semibold tabular-nums leading-none text-ink">{value}</span>

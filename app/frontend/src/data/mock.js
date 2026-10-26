@@ -276,7 +276,7 @@ export const trainingPrograms = [
 export const contactInfo = {
   address: 'Ushuru Pension Plaza, Muthangari Drive Block C, First Floor',
   poBox: 'P. O. Box 162 - 00517 Westlands, Nairobi',
-  phone: '0717 023 814',
+  phone: '0722 792 835',
   email: 'info@hamptonscientific.com',
   website: 'www.hamptonscientific.com'
 };

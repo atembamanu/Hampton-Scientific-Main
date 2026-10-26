@@ -260,7 +260,7 @@ export const VisitFormModal = ({ open, onOpenChange, mode = 'create', prospectId
                 className="w-full h-10 px-3 border border-ink/15 rounded-lg text-sm"
               />
               {form.organizationId && (
-                <p className="text-xs text-copper mt-1">Linked to a registered facility. This stays in your book after they are onboarded.</p>
+                <p className="text-xs text-brand mt-1">Linked to a registered facility. This stays in your book after they are onboarded.</p>
               )}
               {orgResults.length > 0 && (
                 <ul className="mt-2 border border-ink/10 rounded-lg divide-y divide-ink/10 max-h-40 overflow-y-auto">

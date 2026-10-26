@@ -13,7 +13,7 @@ export const Training = () => (
       <p className="editorial-label mb-3">Training & Service</p>
       <h1 className="editorial-headline mb-6">
         Support that makes every{' '}
-        <span className="text-copper">installation</span> count.
+        <span className="text-brand">installation</span> count.
       </h1>
       <p className="text-ink-muted max-w-lg mb-16 leading-relaxed">
         From first setup to ongoing maintenance — we help your team get the most from your equipment.
@@ -23,7 +23,7 @@ export const Training = () => (
         {services.map(({ icon: Icon, title, description }) => (
           <div key={title} className="bg-white rounded-2xl border border-ink/10 p-6 shadow-sm">
             <div className="w-12 h-12 rounded-full bg-cream-dark flex items-center justify-center mb-4">
-              <Icon className="w-5 h-5 text-copper" />
+              <Icon className="w-5 h-5 text-brand" />
             </div>
             <h2 className="font-semibold text-ink mb-2">{title}</h2>
             <p className="text-sm text-ink-muted leading-relaxed">{description}</p>

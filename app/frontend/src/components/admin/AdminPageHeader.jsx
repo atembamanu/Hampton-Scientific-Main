@@ -5,7 +5,7 @@ export const AdminPageHeader = ({ label, title, accent, description, actions }) 
       <div className="min-w-0">
         <h1 className="app-page-title break-words">
           {title}
-          {accent && <> <span className="text-copper">{accent}</span></>}
+          {accent && <> <span className="text-brand">{accent}</span></>}
         </h1>
         {description && <p className="text-sm text-ink-muted mt-2 max-w-3xl break-words">{description}</p>}
       </div>
@@ -90,7 +90,7 @@ export const AdminEmptyState = ({ children }) => (
 
 export const AdminLoadingState = () => (
   <div className="py-16 flex justify-center w-full">
-    <div className="w-6 h-6 border-2 border-copper border-t-transparent rounded-full animate-spin" />
+    <div className="w-6 h-6 border-2 border-brand border-t-transparent rounded-full animate-spin" />
   </div>
 );
 

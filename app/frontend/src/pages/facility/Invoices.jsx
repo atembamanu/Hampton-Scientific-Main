@@ -180,7 +180,7 @@ export const Invoices = () => {
               {invoices.map((inv) => (
                 <tr key={inv.id} className="border-b border-ink/5">
                   <td className="px-5 py-3 font-medium">
-                    <Link to={`/dashboard/invoices/${inv.id}`} className="text-ink hover:text-copper hover:underline">
+                    <Link to={`/dashboard/invoices/${inv.id}`} className="text-ink hover:text-brand hover:underline">
                       {inv.invoice_number}
                     </Link>
                   </td>
@@ -190,7 +190,7 @@ export const Invoices = () => {
                   <td className="px-5 py-3 text-ink-muted">{inv.created_at ? new Date(inv.created_at).toLocaleDateString() : '—'}</td>
                   <td className="px-5 py-3 text-right">
                     <div className="inline-flex items-center gap-1">
-                      <button type="button" onClick={() => download(inv.id, inv.invoice_number)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-copper hover:bg-ink/5 hover:text-copper/80">
+                      <button type="button" onClick={() => download(inv.id, inv.invoice_number)} className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-brand hover:bg-ink/5 hover:text-brand/80">
                         <Download className="w-4 h-4" />
                       </button>
                       <RowActionsMenu

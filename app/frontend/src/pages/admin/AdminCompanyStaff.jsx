@@ -348,7 +348,7 @@ export const AdminCompanyStaff = () => {
             {visibleStaff.map((u) => (
               <AdminTableRow key={u.id}>
                 <AdminTableTd>
-                  <button type="button" onClick={() => openEdit(u)} className="font-medium text-left hover:text-copper hover:underline">
+                  <button type="button" onClick={() => openEdit(u)} className="font-medium text-left hover:text-brand hover:underline">
                     {u.firstName} {u.lastName}
                   </button>
                 </AdminTableTd>

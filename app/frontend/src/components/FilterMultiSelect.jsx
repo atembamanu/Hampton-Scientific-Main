@@ -89,7 +89,7 @@ export const FilterMultiSelect = ({
                 >
                   <span
                     className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${
-                      checked ? 'border-copper bg-copper text-white' : 'border-ink/30 bg-white'
+                      checked ? 'border-brand bg-brand text-white' : 'border-ink/30 bg-white'
                     }`}
                     aria-hidden
                   >

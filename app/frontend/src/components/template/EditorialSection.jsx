@@ -14,7 +14,7 @@ export const EditorialField = ({ label, required, error, children }) => (
   <div className="space-y-1.5">
     <label className="editorial-label block">
       {label}
-      {required && <span className="text-copper"> *</span>}
+      {required && <span className="text-red-600"> *</span>}
     </label>
     {children}
     <FieldError>{error}</FieldError>

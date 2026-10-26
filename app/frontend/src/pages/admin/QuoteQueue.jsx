@@ -242,7 +242,7 @@ export const QuoteQueue = ({ title = 'Quote Requests', defaultOpsStatus = '' }) 
             {quotes.map((q) => (
               <AdminTableRow key={q.id}>
                 <AdminTableTd nowrap>
-                  <Link to={`/sysadmin/quotes/${q.id}`} className="font-semibold text-brand hover:text-copper hover:underline">
+                  <Link to={`/sysadmin/quotes/${q.id}`} className="font-semibold text-brand hover:text-brand hover:underline">
                     {q.quote_number || q.id.slice(0, 8).toUpperCase()}
                   </Link>
                   {q.unread_messages > 0 && (
@@ -253,7 +253,7 @@ export const QuoteQueue = ({ title = 'Quote Requests', defaultOpsStatus = '' }) 
                   <p className="font-medium text-ink truncate max-w-[280px]">{q.organization_name}</p>
                   <p className="text-xs text-ink-muted truncate max-w-[280px]">{q.branch_name || '—'}</p>
                   {q.is_guest && (
-                    <span className="mt-1 inline-flex text-[10px] uppercase tracking-wide bg-copper/10 text-copper px-1.5 py-0.5 rounded-full">Guest</span>
+                    <span className="mt-1 inline-flex text-[10px] uppercase tracking-wide bg-brand/10 text-brand px-1.5 py-0.5 rounded-full">Guest</span>
                   )}
                 </AdminTableTd>
                 <AdminTableTd>

@@ -120,7 +120,7 @@ export const AdminInvoiceWorkspace = () => {
 
   return (
     <div className="w-full space-y-6 pb-24">
-      <Link to="/sysadmin/invoices" className="inline-flex items-center gap-2 text-sm text-brand hover:text-copper hover:underline">
+      <Link to="/sysadmin/invoices" className="inline-flex items-center gap-2 text-sm text-brand hover:text-brand hover:underline">
         <ArrowLeft className="w-4 h-4" /> Back to invoices
       </Link>
 
@@ -149,7 +149,7 @@ export const AdminInvoiceWorkspace = () => {
       {invoice.quote_id && (
         <p className="text-sm text-ink-muted">
           Source quote:{' '}
-          <Link to={`/sysadmin/quotes/${invoice.quote_id}`} className="text-brand font-medium hover:text-copper hover:underline">
+          <Link to={`/sysadmin/quotes/${invoice.quote_id}`} className="text-brand font-medium hover:text-brand hover:underline">
             Open quote workspace
           </Link>
         </p>
@@ -265,7 +265,7 @@ export const AdminInvoiceWorkspace = () => {
 
 const AdminLoadingState = () => (
   <div className="py-16 flex justify-center w-full">
-    <Loader2 className="w-6 h-6 animate-spin text-copper" />
+    <Loader2 className="w-6 h-6 animate-spin text-brand" />
   </div>
 );
 

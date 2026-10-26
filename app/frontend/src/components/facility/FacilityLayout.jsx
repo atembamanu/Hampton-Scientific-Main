@@ -122,7 +122,7 @@ export const FacilityLayout = () => {
 
         <p className="text-xs font-semibold text-ink truncate">{user?.organization?.name || user?.facilityName}</p>
         {branch?.name && (
-          <p className="text-[11px] text-copper font-medium truncate mt-0.5">{branch.name}</p>
+          <p className="text-[11px] text-brand font-medium truncate mt-0.5">{branch.name}</p>
         )}
         {personName(user) && (
           <p className="text-[11px] text-ink-muted truncate mt-0.5">{personName(user)}</p>
@@ -152,7 +152,7 @@ export const FacilityLayout = () => {
 
                   `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-colors ${
 
-                    isActive ? 'bg-copper/10 text-copper font-medium' : 'text-ink-muted hover:text-ink hover:bg-ink/5'
+                    isActive ? 'bg-brand/10 text-brand font-medium' : 'text-ink-muted hover:text-ink hover:bg-ink/5'
 
                   }`
 
@@ -258,10 +258,10 @@ export const FacilityLayout = () => {
             hasItems ? (
               <Link
                 to="/dashboard/quote"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-copper hover:underline shrink-0"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-brand hover:underline shrink-0"
               >
                 Quote
-                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-copper text-white text-xs font-semibold flex items-center justify-center">
+                <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-brand text-white text-xs font-semibold flex items-center justify-center">
                   {quoteCount > 99 ? '99+' : quoteCount}
                 </span>
               </Link>

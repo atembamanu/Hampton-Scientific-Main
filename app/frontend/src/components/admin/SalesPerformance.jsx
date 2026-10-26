@@ -4,7 +4,7 @@ const ProgressBar = ({ percent }) => {
   const width = percent == null ? 0 : Math.min(percent, 100);
   return (
     <div className="h-2 rounded-full bg-ink/10 overflow-hidden">
-      <div className="h-full bg-copper" style={{ width: `${width}%` }} />
+      <div className="h-full bg-brand" style={{ width: `${width}%` }} />
     </div>
   );
 };

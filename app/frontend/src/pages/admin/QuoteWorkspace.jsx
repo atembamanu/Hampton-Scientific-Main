@@ -451,7 +451,7 @@ export const QuoteWorkspace = () => {
   };
 
   if (loading) {
-    return <div className="p-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-copper" /></div>;
+    return <div className="p-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-brand" /></div>;
   }
   if (!quote) return <p className="p-6 text-ink-muted">Quote not found.</p>;
 
@@ -479,7 +479,7 @@ export const QuoteWorkspace = () => {
 
   return (
     <div className="w-full space-y-6 pb-24">
-      <Link to="/sysadmin/quotes" className="inline-flex items-center gap-2 text-sm text-brand hover:text-copper hover:underline">
+      <Link to="/sysadmin/quotes" className="inline-flex items-center gap-2 text-sm text-brand hover:text-brand hover:underline">
         <ArrowLeft className="w-4 h-4" /> Back to quotes
       </Link>
 

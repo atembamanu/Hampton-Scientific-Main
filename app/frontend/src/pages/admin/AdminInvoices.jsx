@@ -147,7 +147,7 @@ export const AdminInvoices = () => {
                 <AdminTableTd nowrap>
                   <Link
                     to={`/sysadmin/invoices/${inv.id}`}
-                    className="font-semibold text-brand hover:text-copper hover:underline"
+                    className="font-semibold text-brand hover:text-brand hover:underline"
                   >
                     {inv.invoice_number}
                   </Link>

@@ -12,7 +12,7 @@ const STATUS_STYLES = {
   pending: 'bg-amber-50 text-amber-700 border-amber-200',
   revision_proposed: 'bg-purple-50 text-purple-700 border-purple-200',
   quote_requested: 'bg-amber-50 text-amber-700 border-amber-200',
-  order_placed: 'bg-copper/10 text-copper border-copper/20',
+  order_placed: 'bg-brand/10 text-brand border-brand/20',
   processing: 'bg-blue-50 text-blue-700 border-blue-200',
   dispatched: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   out_for_delivery: 'bg-purple-50 text-purple-700 border-purple-200',

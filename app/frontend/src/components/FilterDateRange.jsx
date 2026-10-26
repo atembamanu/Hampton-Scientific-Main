@@ -154,12 +154,12 @@ export const FilterDateRange = ({ from = '', to = '', onChange }) => {
                   head_row: 'flex',
                   head_cell: 'w-8 text-center text-[11px] font-medium text-ink-faint',
                   row: 'mt-1 flex w-full',
-                  cell: 'relative h-8 w-8 p-0 text-center text-sm [&:has([aria-selected])]:bg-copper/15 [&:has(.day-range-start)]:rounded-l-full [&:has(.day-range-end)]:rounded-r-full',
+                  cell: 'relative h-8 w-8 p-0 text-center text-sm [&:has([aria-selected])]:bg-brand/15 [&:has(.day-range-start)]:rounded-l-full [&:has(.day-range-end)]:rounded-r-full',
                   day: 'date-day inline-flex h-8 w-8 items-center justify-center text-sm text-ink hover:bg-ink/5',
-                  day_selected: 'bg-copper text-white hover:bg-copper hover:text-white',
-                  day_range_start: 'day-range-start rounded-full bg-copper text-white',
-                  day_range_end: 'day-range-end rounded-full bg-copper text-white',
-                  day_range_middle: 'day-range-middle rounded-none bg-copper/15 text-ink',
+                  day_selected: 'bg-brand text-white hover:bg-brand hover:text-white',
+                  day_range_start: 'day-range-start rounded-full bg-brand text-white',
+                  day_range_end: 'day-range-end rounded-full bg-brand text-white',
+                  day_range_middle: 'day-range-middle rounded-none bg-brand/15 text-ink',
                   day_today: 'font-semibold',
                   day_outside: 'text-ink-faint/50',
                   day_disabled: 'text-ink-faint opacity-40',
@@ -198,7 +198,7 @@ export const FilterDateRange = ({ from = '', to = '', onChange }) => {
               </button>
               <button
                 type="button"
-                className="date-range-action h-9 bg-copper px-4 text-sm text-white hover:bg-copper/90"
+                className="date-range-action h-9 bg-brand px-4 text-sm text-white hover:bg-brand/90"
                 onClick={apply}
               >
                 Apply

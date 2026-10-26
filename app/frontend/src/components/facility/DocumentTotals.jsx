@@ -28,7 +28,7 @@ export const DocumentTotals = ({ document: doc, className = '' }) => {
       )}
       <div className="flex justify-between pt-2 border-t border-ink/10">
         <span className="font-semibold text-ink">Total</span>
-        <span className="text-lg font-bold text-copper">{formatPrice(summary.total)}</span>
+        <span className="text-lg font-bold text-brand">{formatPrice(summary.total)}</span>
       </div>
       <div className="flex justify-between">
         <span className="text-ink-muted">Net</span>

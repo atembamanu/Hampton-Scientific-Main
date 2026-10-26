@@ -79,7 +79,7 @@ export const AdminCareerApplication = () => {
 
   return (
     <div className="w-full min-w-0">
-      <Link to="/sysadmin/careers" className="inline-flex items-center gap-2 text-sm text-copper hover:underline mb-4">
+      <Link to="/sysadmin/careers" className="inline-flex items-center gap-2 text-sm text-brand hover:underline mb-4">
         <ArrowLeft className="w-4 h-4" /> Back to careers
       </Link>
 

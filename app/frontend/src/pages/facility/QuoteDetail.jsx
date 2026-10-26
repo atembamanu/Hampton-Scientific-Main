@@ -154,7 +154,7 @@ export const QuoteDetail = () => {
 
   return (
     <div className="pb-24">
-      <Link to="/dashboard/quotes" className="inline-flex items-center gap-2 text-sm text-copper hover:underline mb-6">
+      <Link to="/dashboard/quotes" className="inline-flex items-center gap-2 text-sm text-brand hover:underline mb-6">
         <ArrowLeft className="w-4 h-4" /> Back to quotes
       </Link>
 
@@ -196,7 +196,7 @@ export const QuoteDetail = () => {
         {branchName && <p><span className="text-ink-muted">Branch:</span> <span className="font-medium">{branchName}</span></p>}
         <p><span className="text-ink-muted">{isDraft ? 'Opened' : 'Submitted'}:</span> {formatDateTime(quote.created_at)}</p>
         {isDraft && (
-          <p className="text-sm text-copper pt-2">
+          <p className="text-sm text-brand pt-2">
             This quote has not been sent to Hampton yet. Continue editing to change quantities or add products, then submit for review.
           </p>
         )}
@@ -210,7 +210,7 @@ export const QuoteDetail = () => {
           <span>Product</span>
           <span className="text-center">Qty</span>
           <span className="text-right">List Price</span>
-          {isQuoted && <span className="text-right text-copper">Your Quoted Price</span>}
+          {isQuoted && <span className="text-right text-brand">Your Quoted Price</span>}
           {isQuoted && <span className="text-right">Total</span>}
         </div>
         <ul className="divide-y divide-ink/10">
@@ -238,7 +238,7 @@ export const QuoteDetail = () => {
                 </p>
                 {isQuoted && (
                   <>
-                    <p className="text-sm md:text-right font-semibold text-copper">
+                    <p className="text-sm md:text-right font-semibold text-brand">
                       <span className="text-xs text-ink-muted md:hidden font-normal">Quoted price: </span>
                       {quoted > 0 ? formatPrice(quoted) : '—'}
                     </p>
@@ -324,7 +324,7 @@ export const QuoteDetail = () => {
       {quote.customer_response === 'accepted' && (
         <p className="text-sm text-emerald-700 mt-6">
           Quote accepted.{' '}
-          <Link to="/dashboard/orders" className="text-copper hover:underline">View your orders</Link>
+          <Link to="/dashboard/orders" className="text-brand hover:underline">View your orders</Link>
         </p>
       )}
 

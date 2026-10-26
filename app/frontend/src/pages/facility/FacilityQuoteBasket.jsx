@@ -305,7 +305,7 @@ export const FacilityQuoteBasket = () => {
         </p>
 
         {draftQuoteId && (
-          <p className="text-sm text-copper pt-2">
+          <p className="text-sm text-brand pt-2">
             {quoteExtras?.sourceOrderNumber
               ? `Reorder from ${quoteExtras.sourceOrderNumber}. `
               : ''}
@@ -333,7 +333,7 @@ export const FacilityQuoteBasket = () => {
 
           onChange={(e) => setSearch(e.target.value)}
 
-          className="w-full bg-white border border-ink/10 rounded-full pl-11 pr-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-copper/40"
+          className="w-full bg-white border border-ink/10 rounded-full pl-11 pr-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-brand/40"
 
         />
 
@@ -453,7 +453,7 @@ export const FacilityQuoteBasket = () => {
 
                   placeholder="Add a note (e.g. preferred brand or specification)"
 
-                  className="w-full bg-white border border-ink/10 rounded-lg px-3 py-2 text-xs text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-copper/40"
+                  className="w-full bg-white border border-ink/10 rounded-lg px-3 py-2 text-xs text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-brand/40"
 
                 />
 

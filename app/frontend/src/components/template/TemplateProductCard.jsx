@@ -18,7 +18,7 @@ export const TemplateProductCard = ({ product, className = '' }) => (
     <p className="text-[11px] text-ink-faint uppercase tracking-wider mb-1">{product.category}</p>
 
     <Link to={`/products/${product.slug}`} className="block mb-3">
-      <h3 className="font-semibold text-ink text-sm leading-snug hover:text-copper transition-colors line-clamp-2">
+      <h3 className="font-semibold text-ink text-sm leading-snug hover:text-brand transition-colors line-clamp-2">
         {product.name}
       </h3>
     </Link>

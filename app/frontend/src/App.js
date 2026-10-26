@@ -27,8 +27,11 @@ import { Products } from './pages/Products';
 import { ProductDetail } from './pages/ProductDetail';
 
 import { About } from './pages/About';
+import { Partners } from './pages/Partners';
 
 import { Contact } from './pages/Contact';
+import { Privacy } from './pages/Privacy';
+import { CookieConsent } from './components/CookieConsent';
 
 import { Training } from './pages/Training';
 import { OrderManagement } from './pages/OrderManagement';
@@ -159,6 +162,7 @@ function App() {
           <BrowserRouter>
             <ConfirmProvider>
             <SessionExpiryWatcher />
+            <CookieConsent />
 
             <ScrollToTop />
 
@@ -176,8 +180,10 @@ function App() {
               <Route path="/order-management" element={<TemplateLayout><OrderManagement /></TemplateLayout>} />
 
               <Route path="/about" element={<TemplateLayout><About /></TemplateLayout>} />
+              <Route path="/partners" element={<TemplateLayout><Partners /></TemplateLayout>} />
 
               <Route path="/contact" element={<TemplateLayout><Contact /></TemplateLayout>} />
+              <Route path="/privacy" element={<TemplateLayout><Privacy /></TemplateLayout>} />
               <Route path="/careers" element={<TemplateLayout><Careers /></TemplateLayout>} />
               <Route path="/careers/:jobId" element={<TemplateLayout><CareerDetail /></TemplateLayout>} />
 

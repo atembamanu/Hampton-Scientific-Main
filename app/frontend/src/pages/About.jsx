@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
+import { toast } from 'sonner';
 
 import { EditorialSection } from '../components/template/EditorialSection';
 import {
@@ -10,6 +12,8 @@ import {
   aboutVision,
   aboutWhatWeDo,
 } from '../data/catalog';
+import { API_URL } from '../config/apiBaseUrl';
+import { downloadBlob } from '../utils/csv';
 import { useSiteContent } from '../utils/siteContent';
 
 const sections = [
@@ -33,7 +37,7 @@ const AboutSideNav = ({ activeId, onNavigate }) => (
               onClick={() => onNavigate(id)}
               className={`ui-nav-chip block text-left text-[11px] font-medium uppercase tracking-[0.15em] whitespace-nowrap px-3 py-2 lg:px-0 lg:py-2.5 rounded-full lg:rounded-none transition-colors border lg:border-0 ${
                 isActive
-                  ? 'text-copper border-copper/30 bg-copper/5 lg:bg-transparent lg:border-l-2 lg:border-copper lg:pl-3'
+                  ? 'text-brand border-brand/30 bg-brand/5 lg:bg-transparent lg:border-l-2 lg:border-brand lg:pl-3'
                   : 'text-ink-faint border-transparent hover:text-ink lg:hover:border-l-2 lg:hover:border-ink/15 lg:hover:pl-3'
               }`}
             >
@@ -48,7 +52,23 @@ const AboutSideNav = ({ activeId, onNavigate }) => (
 
 export const About = () => {
   const [activeId, setActiveId] = useState(sections[0].id);
+  const [downloadingProfile, setDownloadingProfile] = useState(false);
   const { impact } = useSiteContent();
+
+  const downloadCompanyProfile = async () => {
+    if (downloadingProfile) return;
+    setDownloadingProfile(true);
+    try {
+      const res = await axios.get(`${API_URL}/api/company-profile.pdf`, {
+        responseType: 'blob',
+      });
+      downloadBlob(res.data, 'Hampton_Scientific_Company_Profile.pdf');
+    } catch {
+      toast.error('Could not download the company profile. Please try again.');
+    } finally {
+      setDownloadingProfile(false);
+    }
+  };
 
   useEffect(() => {
     const elements = sections
@@ -84,18 +104,29 @@ export const About = () => {
           <div>
             <div className="flex items-center gap-3 mb-6">
               <span className="editorial-label">About us</span>
-              <span className="w-8 h-px bg-copper" />
+              <span className="w-8 h-px bg-brand" />
               <span className="editorial-label">Est. 2009</span>
             </div>
             <h1 className="editorial-headline mb-6">
               Connecting Africa with{' '}
-              <span className="text-copper">global</span> healthcare innovation.
+              <span className="text-brand">global</span> healthcare innovation.
             </h1>
             <p className="text-ink-muted leading-relaxed max-w-lg mb-8">
               Your trusted partner in linking Africa&apos;s healthcare sector with global scientific innovation —
               supplying certified equipment, consumables, and training.
             </p>
-            <Link to="/contact" className="btn-primary">Enquire</Link>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link to="/contact" className="btn-primary">Enquire</Link>
+              <button
+                type="button"
+                onClick={downloadCompanyProfile}
+                disabled={downloadingProfile}
+                className="btn-secondary"
+                data-testid="download-company-profile-btn"
+              >
+                {downloadingProfile ? 'Preparing PDF…' : 'Download company profile'}
+              </button>
+            </div>
           </div>
           <div className="aspect-[4/5] max-h-[480px] rounded-2xl overflow-hidden bg-cream-dark">
             <img
@@ -146,7 +177,7 @@ export const About = () => {
                 <div className="grid sm:grid-cols-2 gap-x-12 lg:gap-x-16 gap-y-12 lg:gap-y-14">
                   {aboutValues.map(({ title, description }, i) => (
                     <div key={title} className="max-w-sm">
-                      <span className="editorial-label text-copper mb-4 block">
+                      <span className="editorial-label text-brand mb-4 block">
                         {String(i + 1).padStart(2, '0')}
                       </span>
                       <h3 className="font-semibold text-ink text-base mb-3">{title}</h3>
@@ -160,7 +191,7 @@ export const About = () => {
                 <ul className="grid md:grid-cols-2 gap-x-16 lg:gap-x-20 gap-y-5">
                   {aboutCapabilities.map((item) => (
                     <li key={item} className="flex items-start gap-4 text-[15px] text-ink-muted leading-relaxed pr-4">
-                      <span className="w-1.5 h-1.5 rounded-full bg-copper mt-2 flex-shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-brand mt-2 flex-shrink-0" />
                       {item}
                     </li>
                   ))}

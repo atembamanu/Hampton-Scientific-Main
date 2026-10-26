@@ -60,7 +60,7 @@ const matchesQuery = (query, values) => {
 
 const StatCard = ({ label, value, hint }) => (
   <div className="editorial-panel p-5">
-    <p className="text-[10px] uppercase tracking-[0.16em] font-semibold text-copper">{label}</p>
+    <p className="text-[10px] uppercase tracking-[0.16em] font-semibold text-brand">{label}</p>
     <p className="text-2xl font-semibold tabular-nums mt-2 text-ink">{value}</p>
     {hint ? <p className="text-xs text-ink-muted mt-1">{hint}</p> : null}
   </div>
@@ -232,7 +232,7 @@ export const AdminCustomerDetail = () => {
 
   return (
     <div className="w-full">
-      <Link to="/sysadmin/facilities" className="inline-flex items-center gap-2 text-sm text-copper hover:underline mb-4">
+      <Link to="/sysadmin/facilities" className="inline-flex items-center gap-2 text-sm text-brand hover:underline mb-4">
         <ArrowLeft className="w-4 h-4" /> Back to facilities
       </Link>
 
@@ -280,14 +280,14 @@ export const AdminCustomerDetail = () => {
             <p><span className="text-ink-muted">Registered by:</span> {data?.registeredBy?.name || 'Facility self-registration'}</p>
           </div>
           <div className="editorial-panel p-5 text-sm space-y-3">
-            <p className="text-xs uppercase tracking-[0.14em] text-copper font-semibold">Responsible sales agents</p>
+            <p className="text-xs uppercase tracking-[0.14em] text-brand font-semibold">Responsible sales agents</p>
             {fieldAgents.length === 0 ? (
               <p className="text-ink-muted">No sales agent has this facility in their book yet.</p>
             ) : (
               <ul className="space-y-2">
                 {fieldAgents.map((agent) => (
                   <li key={agent.prospectId} className="flex flex-wrap items-baseline justify-between gap-2">
-                    <Link to={`/sysadmin/field/${agent.prospectId}`} className="text-copper hover:underline">
+                    <Link to={`/sysadmin/field/${agent.prospectId}`} className="text-brand hover:underline">
                       {agent.agentName}
                     </Link>
                     <span className="text-ink-muted">
@@ -325,7 +325,7 @@ export const AdminCustomerDetail = () => {
                             type="button"
                             disabled={linking || row.organizationId === orgId}
                             onClick={() => linkFieldRecord(row.id)}
-                            className="text-xs text-copper hover:underline disabled:opacity-60"
+                            className="text-xs text-brand hover:underline disabled:opacity-60"
                           >
                             {row.organizationId === orgId ? 'Linked' : 'Link'}
                           </button>
@@ -367,8 +367,8 @@ export const AdminCustomerDetail = () => {
                 {filteredBranches.map((b) => (
                   <AdminTableRow key={b.id}>
                     <AdminTableTd>
-                      <button type="button" onClick={() => setBranchForm(b)} className="font-medium text-left hover:text-copper hover:underline">{b.name}</button>
-                      {b.isMain ? <p className="text-xs text-copper">Main</p> : null}
+                      <button type="button" onClick={() => setBranchForm(b)} className="font-medium text-left hover:text-brand hover:underline">{b.name}</button>
+                      {b.isMain ? <p className="text-xs text-brand">Main</p> : null}
                     </AdminTableTd>
                     <AdminTableTd nowrap className="text-ink-muted">{b.branchCode || '—'}</AdminTableTd>
                     <AdminTableTd nowrap className="text-ink-muted">{b.county || '—'}</AdminTableTd>
@@ -420,7 +420,7 @@ export const AdminCustomerDetail = () => {
                 {filteredUsers.map((u) => (
                   <AdminTableRow key={u.id}>
                     <AdminTableTd>
-                      <button type="button" onClick={() => setUserForm(u)} className="font-medium text-left hover:text-copper hover:underline">{u.firstName} {u.lastName}</button>
+                      <button type="button" onClick={() => setUserForm(u)} className="font-medium text-left hover:text-brand hover:underline">{u.firstName} {u.lastName}</button>
                       <p className="text-xs text-ink-muted">{u.jobTitle || '—'}</p>
                     </AdminTableTd>
                     <AdminTableTd nowrap>{ROLE_LABELS[u.role] || u.role?.replace(/_/g, ' ')}</AdminTableTd>
@@ -476,7 +476,7 @@ export const AdminCustomerDetail = () => {
                 {filteredQuotes.map((q) => (
                   <AdminTableRow key={q.id}>
                     <AdminTableTd nowrap>
-                      <Link to={`/sysadmin/quotes/${q.id}`} className="font-semibold text-brand hover:text-copper hover:underline">
+                      <Link to={`/sysadmin/quotes/${q.id}`} className="font-semibold text-brand hover:text-brand hover:underline">
                         {q.quote_number || q.id.slice(0, 8).toUpperCase()}
                       </Link>
                     </AdminTableTd>
@@ -518,7 +518,7 @@ export const AdminCustomerDetail = () => {
                 {filteredInvoices.map((inv) => (
                   <AdminTableRow key={inv.id}>
                     <AdminTableTd nowrap>
-                      <Link to={`/sysadmin/invoices/${inv.id}`} className="font-semibold text-brand hover:text-copper hover:underline">
+                      <Link to={`/sysadmin/invoices/${inv.id}`} className="font-semibold text-brand hover:text-brand hover:underline">
                         {inv.invoice_number}
                       </Link>
                     </AdminTableTd>

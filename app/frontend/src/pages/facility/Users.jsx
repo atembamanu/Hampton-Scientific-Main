@@ -358,7 +358,7 @@ export const Users = () => {
           <EditorialField label="Assign branches" required>
             <div className="flex flex-wrap gap-2">
               {branches.filter((b) => b.status !== 'inactive' || form.branchIds.includes(b.id)).map((b) => (
-                <label key={b.id} className={`px-3 py-1.5 rounded-full text-xs border cursor-pointer ${form.branchIds.includes(b.id) ? 'border-copper bg-copper/10 text-copper' : 'border-ink/15'}`}>
+                <label key={b.id} className={`px-3 py-1.5 rounded-full text-xs border cursor-pointer ${form.branchIds.includes(b.id) ? 'border-brand bg-brand/10 text-brand' : 'border-ink/15'}`}>
                   <input type="checkbox" className="sr-only" checked={form.branchIds.includes(b.id)} onChange={() => toggleBranch(b.id)} />
                   {b.name}
                 </label>

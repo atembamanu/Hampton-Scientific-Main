@@ -29,14 +29,14 @@ const TABS = [
 const Metric = ({ label, value, hint, to }) => {
   const body = (
     <>
-      <p className="text-[10px] uppercase tracking-[0.16em] font-semibold text-copper">{label}</p>
+      <p className="text-[10px] uppercase tracking-[0.16em] font-semibold text-brand">{label}</p>
       <p className="text-2xl font-semibold tabular-nums mt-2 text-ink">{value ?? '—'}</p>
       {hint ? <p className="text-xs text-ink-muted mt-1">{hint}</p> : null}
     </>
   );
   if (to) {
     return (
-      <Link to={to} className="editorial-panel p-5 hover:border-copper/30 transition-colors block">
+      <Link to={to} className="editorial-panel p-5 hover:border-brand/30 transition-colors block">
         {body}
       </Link>
     );
@@ -52,17 +52,17 @@ const BarChart = ({ rows }) => {
   return (
     <div className="px-5 py-5">
       <div className="flex items-center gap-4 text-[11px] text-ink-muted mb-4">
-        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-copper" /> Orders</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-brand" /> Orders</span>
         <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-ink/50" /> Quotes</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-copper/30" /> Items</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-brand/30" /> Items</span>
       </div>
       <div className="flex items-end gap-2 h-40 overflow-x-auto">
         {rows.map((row) => (
           <div key={row.month} className="flex min-w-[2.5rem] flex-1 flex-col items-center gap-2">
             <div className="flex h-28 w-full items-end justify-center gap-0.5">
-              <div className="w-1/3 min-h-[2px] rounded-t-sm bg-copper" style={{ height: `${((row.orders || 0) / max) * 100}%` }} title={`${row.orders} orders`} />
+              <div className="w-1/3 min-h-[2px] rounded-t-sm bg-brand" style={{ height: `${((row.orders || 0) / max) * 100}%` }} title={`${row.orders} orders`} />
               <div className="w-1/3 min-h-[2px] rounded-t-sm bg-ink/50" style={{ height: `${((row.quotes || 0) / max) * 100}%` }} title={`${row.quotes} quotes`} />
-              <div className="w-1/3 min-h-[2px] rounded-t-sm bg-copper/30" style={{ height: `${((row.items || 0) / max) * 100}%` }} title={`${row.items} items`} />
+              <div className="w-1/3 min-h-[2px] rounded-t-sm bg-brand/30" style={{ height: `${((row.items || 0) / max) * 100}%` }} title={`${row.items} items`} />
             </div>
             <span className="text-[10px] text-ink-muted truncate w-full text-center">{row.label || row.month}</span>
           </div>
@@ -272,7 +272,7 @@ export const Reports = () => {
                       <h2 className="font-semibold text-ink">Waiting on you</h2>
                       <p className="text-xs text-ink-muted mt-1">Priced or revised quotes you can convert or reply to.</p>
                     </div>
-                    <Link to="/dashboard/quotes" className="text-xs text-copper hover:underline">All quotes</Link>
+                    <Link to="/dashboard/quotes" className="text-xs text-brand hover:underline">All quotes</Link>
                   </div>
                   <div className="table-scroll">
                     <table className="w-full text-sm" style={{ minWidth: '640px' }}>
@@ -288,7 +288,7 @@ export const Reports = () => {
                         {(reports.openActions || []).map((row) => (
                           <tr key={row.id} className="border-b border-ink/5">
                             <td className="px-5 py-3 font-medium">
-                              <Link to={`/dashboard/quotes/${row.id}`} className="hover:text-copper hover:underline">
+                              <Link to={`/dashboard/quotes/${row.id}`} className="hover:text-brand hover:underline">
                                 {row.number || row.id.slice(0, 8)}
                               </Link>
                             </td>
@@ -327,7 +327,7 @@ export const Reports = () => {
                             <span className="text-ink-muted tabular-nums shrink-0">{row.quantity} · {row.lines} lines</span>
                           </div>
                           <div className="h-1.5 rounded-full bg-ink/5 overflow-hidden">
-                            <div className="h-full bg-copper" style={{ width: `${(row.quantity / catMax) * 100}%` }} />
+                            <div className="h-full bg-brand" style={{ width: `${(row.quantity / catMax) * 100}%` }} />
                           </div>
                         </div>
                       ))}
@@ -389,7 +389,7 @@ export const Reports = () => {
                               <td className="px-5 py-3 font-medium text-ink">
                                 {product.productName}
                                 {product.dueToRestock && (
-                                  <span className="ml-2 text-[10px] uppercase tracking-wider text-copper">Due</span>
+                                  <span className="ml-2 text-[10px] uppercase tracking-wider text-brand">Due</span>
                                 )}
                               </td>
                               <td className="px-5 py-3 text-ink-muted">{categoryName(product)}</td>
@@ -419,7 +419,7 @@ export const Reports = () => {
               <div className="editorial-panel overflow-hidden">
                 <div className="px-5 py-4 border-b border-ink/10 flex justify-between items-center">
                   <h2 className="font-semibold text-ink">Recent orders</h2>
-                  <Link to="/dashboard/orders" className="text-xs text-copper hover:underline">All orders</Link>
+                  <Link to="/dashboard/orders" className="text-xs text-brand hover:underline">All orders</Link>
                 </div>
                 {(reports.recentOrders || []).length === 0 ? (
                   <p className="text-sm text-ink-muted px-5 py-8">No orders in this period.</p>
@@ -438,7 +438,7 @@ export const Reports = () => {
                         {(reports.recentOrders || []).map((order) => (
                           <tr key={order.id} className="border-b border-ink/5">
                             <td className="px-5 py-3 font-medium">
-                              <Link to={`/dashboard/orders/${order.id}`} className="hover:text-copper hover:underline">
+                              <Link to={`/dashboard/orders/${order.id}`} className="hover:text-brand hover:underline">
                                 {order.orderNumber}
                               </Link>
                             </td>
@@ -455,7 +455,7 @@ export const Reports = () => {
               <div className="editorial-panel overflow-hidden">
                 <div className="px-5 py-4 border-b border-ink/10 flex justify-between items-center">
                   <h2 className="font-semibold text-ink">Quote history</h2>
-                  <Link to="/dashboard/quotes" className="text-xs text-copper hover:underline">All quotes</Link>
+                  <Link to="/dashboard/quotes" className="text-xs text-brand hover:underline">All quotes</Link>
                 </div>
                 {(reports.quoteHistory || []).length === 0 ? (
                   <p className="text-sm text-ink-muted px-5 py-8">No quotes in this period.</p>
@@ -474,7 +474,7 @@ export const Reports = () => {
                         {(reports.quoteHistory || []).map((quote) => (
                           <tr key={quote.id} className="border-b border-ink/5">
                             <td className="px-5 py-3 font-medium">
-                              <Link to={`/dashboard/quotes/${quote.id}`} className="hover:text-copper hover:underline">
+                              <Link to={`/dashboard/quotes/${quote.id}`} className="hover:text-brand hover:underline">
                                 {quote.quoteNumber || quote.id.slice(0, 8)}
                               </Link>
                             </td>
@@ -514,7 +514,7 @@ export const Reports = () => {
                       <tr key={row.branchId} className="border-b border-ink/5">
                         <td className="px-5 py-3 font-medium">
                           {row.branchName}
-                          {row.isMain && <span className="ml-2 text-[10px] text-copper">MAIN</span>}
+                          {row.isMain && <span className="ml-2 text-[10px] text-brand">MAIN</span>}
                         </td>
                         <td className="px-5 py-3 text-right tabular-nums">{row.quotes}</td>
                         <td className="px-5 py-3 text-right tabular-nums">{row.orders}</td>

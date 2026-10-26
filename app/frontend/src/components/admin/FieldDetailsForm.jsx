@@ -148,7 +148,7 @@ export const FieldDetailsForm = ({ value, onChange, counties }) => {
 
 export const LocationHint = ({ status }) => (
   <p className="text-sm text-ink-muted inline-flex items-start gap-2">
-    <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-copper" />
+    <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-brand" />
     <span>{status}</span>
   </p>
 );

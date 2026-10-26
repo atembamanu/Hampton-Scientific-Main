@@ -104,7 +104,7 @@ const FeatureCarousel = ({ slides, ariaLabel }) => {
   return (
     <div className="om-carousel">
       <div className="om-carousel-copy">
-        <p className="text-copper text-xs font-semibold tracking-[0.2em] uppercase mb-3 inline-flex items-center gap-2">
+        <p className="text-brand text-xs font-semibold tracking-[0.2em] uppercase mb-3 inline-flex items-center gap-2">
           {Icon ? <Icon className="w-3.5 h-3.5" aria-hidden /> : null}
           {slide.label}
         </p>
@@ -162,10 +162,10 @@ export const OrderManagement = () => (
       <div className="absolute inset-0 om-hero-wash" aria-hidden />
       <div className="relative max-w-7xl mx-auto w-full px-4 sm:px-6 pt-12 pb-14 lg:pt-16 lg:pb-20 flex flex-col items-center text-center">
         <div className="om-reveal max-w-2xl mb-10 lg:mb-12">
-          <p className="editorial-label mb-4 text-copper">Hampton Scientific</p>
+          <p className="editorial-label mb-4 text-brand">Hampton Scientific</p>
           <h1 className="text-4xl sm:text-5xl lg:text-[3.35rem] font-bold leading-[1.06] tracking-tight text-ink mb-5">
             Order management that ends the{' '}
-            <span className="text-copper italic font-semibold">procurement hustle</span>.
+            <span className="text-brand italic font-semibold">procurement hustle</span>.
           </h1>
           <p className="text-ink-muted text-base sm:text-[1.05rem] leading-relaxed mb-8 mx-auto max-w-lg">
             Quote, track, report, and stay connected with Hampton — one facility portal for your whole organisation.
@@ -204,7 +204,7 @@ export const OrderManagement = () => (
         <ul className="space-y-5">
           {PAINS.map((item) => (
             <li key={item} className="flex items-start gap-3 text-sm sm:text-base text-ink border-b border-ink/10 pb-5 last:border-0 last:pb-0">
-              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-copper flex-shrink-0" aria-hidden />
+              <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-brand flex-shrink-0" aria-hidden />
               {item}
             </li>
           ))}
@@ -255,7 +255,7 @@ export const OrderManagement = () => (
               'Personnel scoped to the locations they serve',
             ].map((item) => (
               <li key={item} className="flex items-start gap-2.5 text-sm text-ink-muted">
-                <Building2 className="w-4 h-4 text-copper flex-shrink-0 mt-0.5" />
+                <Building2 className="w-4 h-4 text-brand flex-shrink-0 mt-0.5" />
                 {item}
               </li>
             ))}
@@ -289,7 +289,7 @@ export const OrderManagement = () => (
               'Branch staff see their scope — not the whole organisation',
             ].map((item) => (
               <li key={item} className="flex items-start gap-2.5 text-sm text-ink-muted">
-                <Lock className="w-4 h-4 text-copper flex-shrink-0 mt-0.5" />
+                <Lock className="w-4 h-4 text-brand flex-shrink-0 mt-0.5" />
                 {item}
               </li>
             ))}
@@ -301,7 +301,7 @@ export const OrderManagement = () => (
     <section className="border-t border-ink/10 bg-ink text-cream">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 lg:py-28">
         <div className="max-w-2xl mb-12">
-          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-copper-light mb-3">Connected to Hampton</p>
+          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-brand-light mb-3">Connected to Hampton</p>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight leading-tight mb-4">
             Catalogue, conversation, and savings — without leaving the portal.
           </h2>
@@ -316,7 +316,7 @@ export const OrderManagement = () => (
             { icon: Percent, title: 'Savings you can see', body: 'Quoted lines show what you save against list before you accept.' },
           ].map(({ icon: Icon, title, body }) => (
             <div key={title} className="border-t border-white/15 pt-6">
-              <Icon className="w-5 h-5 text-copper-light mb-4" aria-hidden />
+              <Icon className="w-5 h-5 text-brand-light mb-4" aria-hidden />
               <h3 className="text-lg font-semibold mb-2">{title}</h3>
               <p className="text-sm text-cream/70 leading-relaxed">{body}</p>
             </div>
@@ -328,7 +328,7 @@ export const OrderManagement = () => (
     <section className="relative overflow-hidden border-t border-ink/10">
       <div className="absolute inset-0 om-cta-wash" aria-hidden />
       <div className="relative max-w-3xl mx-auto px-4 sm:px-6 py-20 lg:py-28 text-center">
-        <ClipboardList className="w-8 h-8 text-copper mx-auto mb-6" aria-hidden />
+        <ClipboardList className="w-8 h-8 text-brand mx-auto mb-6" aria-hidden />
         <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-ink leading-tight mb-4">
           Register your facility. Feel the difference on the next order.
         </h2>
@@ -347,7 +347,7 @@ export const OrderManagement = () => (
         <ul className="mt-10 flex flex-wrap justify-center gap-x-6 gap-y-2 text-xs text-ink-faint">
           {['Multi-branch visibility', 'Role-based access', 'Quote to invoice', 'Live reporting'].map((item) => (
             <li key={item} className="inline-flex items-center gap-1.5">
-              <Check className="w-3.5 h-3.5 text-copper" />
+              <Check className="w-3.5 h-3.5 text-brand" />
               {item}
             </li>
           ))}

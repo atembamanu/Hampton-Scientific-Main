@@ -9,8 +9,8 @@ import { StatusBadge } from '../../components/facility/StatusBadge';
 import { useLiveUpdates } from '../../hooks/useLiveUpdates';
 
 const StatCard = ({ icon: Icon, label, value, to }) => (
-  <Link to={to} className="editorial-panel p-5 hover:border-copper/30 transition-colors block">
-    <Icon className="w-5 h-5 text-copper mb-3" />
+  <Link to={to} className="editorial-panel p-5 hover:border-brand/30 transition-colors block">
+    <Icon className="w-5 h-5 text-brand mb-3" />
     <p className="text-2xl font-bold text-ink">{value ?? '—'}</p>
     <p className="text-xs text-ink-muted mt-1">{label}</p>
   </Link>
@@ -86,7 +86,7 @@ export const FacilityDashboard = () => {
         <div className="editorial-panel overflow-hidden">
           <div className="px-5 py-4 border-b border-ink/10 flex flex-col gap-2 sm:flex-row sm:justify-between sm:items-center">
             <h2 className="font-semibold text-ink">Branch activity</h2>
-            <Link to="/dashboard/branches" className="text-xs text-copper hover:underline">Manage branches</Link>
+            <Link to="/dashboard/branches" className="text-xs text-brand hover:underline">Manage branches</Link>
           </div>
           <div className="table-scroll">
             <table className="w-full text-sm" style={{ minWidth: '720px' }}>
@@ -104,7 +104,7 @@ export const FacilityDashboard = () => {
                   <tr key={b.branchId} className="border-b border-ink/5 hover:bg-ink/[0.02]">
                     <td className="px-5 py-3 font-medium text-ink">
                       {b.branchName}
-                      {b.isMain && <span className="ml-2 text-[10px] text-copper">MAIN</span>}
+                      {b.isMain && <span className="ml-2 text-[10px] text-brand">MAIN</span>}
                     </td>
                     <td className="px-5 py-3 text-ink-muted">{b.branchCode}</td>
                     <td className="px-5 py-3"><StatusBadge status={b.status} /></td>

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from fastapi.responses import Response
 from typing import List
 from datetime import datetime
 
@@ -29,6 +30,7 @@ from utils.email_followup import get_followup_settings, update_followup_settings
 from utils.contact_validation import raise_if_invalid_email, raise_if_invalid_phone
 from utils.logger import logger
 from utils.site_content import normalize_impact_stats, normalize_partners
+from utils.company_profile_pdf import build_company_profile_pdf, load_company_profile_data
 from deps import get_db
 from repositories import contact as contact_repo
 
@@ -203,6 +205,25 @@ async def get_settings(db: Session = Depends(get_db)):
         if key not in settings:
             settings[key] = val
     return settings
+
+
+@router.get("/company-profile.pdf")
+async def download_company_profile(db: Session = Depends(get_db)):
+    """Public download: company profile PDF built from live site settings and catalogue."""
+    try:
+        pdf_bytes = build_company_profile_pdf(load_company_profile_data(db))
+    except Exception as exc:
+        logger.exception("Failed to generate company profile PDF")
+        raise HTTPException(status_code=500, detail="Failed to generate company profile") from exc
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'attachment; filename="Hampton_Scientific_Company_Profile.pdf"',
+            "Cache-Control": "private, max-age=300",
+        },
+    )
+
 
 # ---- admin contact routes -----------------------------------------------
 

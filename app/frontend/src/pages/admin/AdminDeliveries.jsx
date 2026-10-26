@@ -114,7 +114,7 @@ export const AdminDeliveries = () => {
             {orders.map((o) => (
               <AdminTableRow key={o.id}>
                 <AdminTableTd nowrap>
-                  <Link to={`/sysadmin/orders/${o.id}`} className="font-semibold text-brand hover:text-copper hover:underline">{o.orderNumber}</Link>
+                  <Link to={`/sysadmin/orders/${o.id}`} className="font-semibold text-brand hover:text-brand hover:underline">{o.orderNumber}</Link>
                 </AdminTableTd>
                 <AdminTableTd>
                   <p className="truncate max-w-[280px]">{o.organizationName}</p>

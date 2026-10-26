@@ -63,7 +63,7 @@ export const InvoiceDetail = () => {
 
   return (
     <div className="pb-24">
-      <Link to="/dashboard/invoices" className="inline-flex items-center gap-2 text-sm text-copper hover:underline mb-6">
+      <Link to="/dashboard/invoices" className="inline-flex items-center gap-2 text-sm text-brand hover:underline mb-6">
         <ArrowLeft className="w-4 h-4" /> Back to invoices
       </Link>
 
@@ -99,7 +99,7 @@ export const InvoiceDetail = () => {
         {invoice.order_id && (
           <p>
             <span className="text-ink-muted">Order:</span>{' '}
-            <Link to={`/dashboard/orders/${invoice.order_id}`} className="text-copper hover:underline">
+            <Link to={`/dashboard/orders/${invoice.order_id}`} className="text-brand hover:underline">
               {invoice.order_number || 'View order'}
             </Link>
           </p>
@@ -107,7 +107,7 @@ export const InvoiceDetail = () => {
         {invoice.quote_id && (
           <p>
             <span className="text-ink-muted">Quote:</span>{' '}
-            <Link to={`/dashboard/quotes/${invoice.quote_id}`} className="text-copper hover:underline">
+            <Link to={`/dashboard/quotes/${invoice.quote_id}`} className="text-brand hover:underline">
               {invoice.quote_number || 'View quote'}
             </Link>
           </p>
@@ -123,7 +123,7 @@ export const InvoiceDetail = () => {
               <th className="px-5 py-3">Product</th>
               <th className="px-5 py-3 text-right">Qty</th>
               <th className="px-5 py-3 text-right">List Price</th>
-              <th className="px-5 py-3 text-right text-copper">Agreed Price</th>
+              <th className="px-5 py-3 text-right text-brand">Agreed Price</th>
               <th className="px-5 py-3 text-right">Total</th>
             </tr>
           </thead>
@@ -136,7 +136,7 @@ export const InvoiceDetail = () => {
                   <td className="px-5 py-3 font-medium">{item.product_name}</td>
                   <td className="px-5 py-3 text-right">{item.quantity}</td>
                   <td className="px-5 py-3 text-right text-ink-muted">{list > 0 ? formatPrice(list) : '—'}</td>
-                  <td className="px-5 py-3 text-right font-semibold text-copper">{formatPrice(agreed)}</td>
+                  <td className="px-5 py-3 text-right font-semibold text-brand">{formatPrice(agreed)}</td>
                   <td className="px-5 py-3 text-right font-medium">{formatPrice(lineTotal(agreed, item.quantity))}</td>
                 </tr>
               );

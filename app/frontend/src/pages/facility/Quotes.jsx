@@ -183,7 +183,7 @@ export const Quotes = () => {
                 return (
                   <tr key={q.id} className="border-b border-ink/5 hover:bg-ink/[0.02]">
                     <td className="px-5 py-3 font-medium">
-                      <Link to={`/dashboard/quotes/${q.id}`} className="hover:text-copper hover:underline">
+                      <Link to={`/dashboard/quotes/${q.id}`} className="hover:text-brand hover:underline">
                         {q.quote_number || q.id.slice(0, 8).toUpperCase()}
                       </Link>
                       {q.unread_messages > 0 && (
@@ -196,7 +196,7 @@ export const Quotes = () => {
                     <td className="px-5 py-3 text-ink-muted">{formatPrice(q.list_subtotal || 0)}</td>
                     <td className="px-5 py-3">
                       {quoted ? (
-                        <span className="font-semibold text-copper">{formatPrice(q.total || 0)}</span>
+                        <span className="font-semibold text-brand">{formatPrice(q.total || 0)}</span>
                       ) : (
                         <span className="text-ink-faint">Pending quote</span>
                       )}
@@ -207,7 +207,7 @@ export const Quotes = () => {
                         <button
                           type="button"
                           onClick={() => download(q.id, q.quote_number)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-copper hover:bg-ink/5"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-brand hover:bg-ink/5"
                           aria-label="Download quote"
                         >
                           <Download className="w-4 h-4" />

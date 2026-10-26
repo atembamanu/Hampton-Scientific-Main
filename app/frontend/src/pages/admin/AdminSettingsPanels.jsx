@@ -13,7 +13,7 @@ const Field = ({ label, children, className = '' }) => (
 const Toggle = ({ checked, onChange, testId }) => (
   <label className="relative inline-flex items-center cursor-pointer shrink-0" data-testid={testId}>
     <input type="checkbox" className="sr-only peer" checked={!!checked} onChange={onChange} />
-    <span className="w-11 h-6 rounded-full bg-ink/15 peer-checked:bg-copper after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5" />
+    <span className="w-11 h-6 rounded-full bg-ink/15 peer-checked:bg-brand after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:h-5 after:w-5 after:rounded-full after:bg-white after:transition-transform peer-checked:after:translate-x-5" />
   </label>
 );
 
@@ -116,7 +116,7 @@ export const SettingsSiteInfo = ({ settings, setSettings, onSave, loading }) => 
         ))}
         <button
           type="button"
-          className="text-xs text-copper hover:underline"
+          className="text-xs text-brand hover:underline"
           disabled={(settings.impact_stats || []).length >= 8}
           onClick={() => setSettings({
             ...settings,
@@ -155,7 +155,7 @@ export const SettingsSiteInfo = ({ settings, setSettings, onSave, loading }) => 
         ))}
         <button
           type="button"
-          className="text-xs text-copper hover:underline"
+          className="text-xs text-brand hover:underline"
           disabled={(settings.partners || []).length >= 20}
           onClick={() => setSettings({
             ...settings,

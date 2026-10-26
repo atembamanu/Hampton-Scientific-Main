@@ -29,14 +29,14 @@ export const FacilityProductDetail = () => {
     return (
       <div className="text-center py-16">
         <h1 className="text-xl font-bold text-ink mb-2">Product not found</h1>
-        <Link to="/dashboard/products" className="text-sm text-copper hover:underline">Back to products</Link>
+        <Link to="/dashboard/products" className="text-sm text-brand hover:underline">Back to products</Link>
       </div>
     );
   }
 
   return (
     <div>
-      <Link to="/dashboard/products" className="text-sm text-copper hover:underline mb-6 inline-block">
+      <Link to="/dashboard/products" className="text-sm text-brand hover:underline mb-6 inline-block">
         ← Back to products
       </Link>
 

@@ -362,7 +362,7 @@ export const AdminCategories = () => {
                     <button
                       type="button"
                       onClick={() => openEdit(row)}
-                      className="font-semibold text-brand hover:text-copper hover:underline text-left"
+                      className="font-semibold text-brand hover:text-brand hover:underline text-left"
                     >
                       {row.name}
                     </button>
@@ -374,7 +374,7 @@ export const AdminCategories = () => {
                   <AdminTableTd nowrap className="text-ink-muted">{formatDate(row.created_at)}</AdminTableTd>
                   <AdminTableTd nowrap className="text-ink-muted">{formatDate(row.updated_at)}</AdminTableTd>
                 <AdminTableTd nowrap className="text-right">
-                  <button type="button" onClick={() => openEdit(row)} className="text-xs text-copper hover:underline mr-3 inline-flex items-center gap-1">
+                  <button type="button" onClick={() => openEdit(row)} className="text-xs text-brand hover:underline mr-3 inline-flex items-center gap-1">
                     <Pencil className="w-3 h-3" /> Edit
                   </button>
                   <button type="button" onClick={() => handleDelete(row)} className="text-xs text-ink-muted hover:underline inline-flex items-center gap-1">

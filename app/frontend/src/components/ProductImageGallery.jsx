@@ -80,7 +80,7 @@ export const ProductImageGallery = ({ images = [], alt = '', className = '' }) =
               key={`${src}-${i}`}
               type="button"
               className={`gallery-thumb shrink-0 w-16 h-16 overflow-hidden border ${
-                i === safeIndex ? 'border-copper ring-2 ring-copper/30' : 'border-ink/10 hover:border-ink/25'
+                i === safeIndex ? 'border-brand ring-2 ring-brand/30' : 'border-ink/10 hover:border-ink/25'
               }`}
               aria-label={`Show image ${i + 1}`}
               aria-current={i === safeIndex ? 'true' : undefined}

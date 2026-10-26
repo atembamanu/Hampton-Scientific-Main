@@ -32,7 +32,7 @@ export const Products = () => {
             <nav className="lg:sticky lg:top-28 space-y-1">
               <Link
                 to="/products"
-                className={`block text-sm py-2 ${!searchParams.get('category') ? 'text-copper font-semibold' : 'text-ink-muted hover:text-ink'}`}
+                className={`block text-sm py-2 ${!searchParams.get('category') ? 'text-brand font-semibold' : 'text-ink-muted hover:text-ink'}`}
               >
                 All products
               </Link>
@@ -41,7 +41,7 @@ export const Products = () => {
                   key={category.category_id}
                   to={`/products?category=${category.slug}`}
                   className={`block text-sm py-1.5 ${
-                    categoryParam === category.slug ? 'text-copper font-semibold' : 'text-ink-muted hover:text-ink'
+                    categoryParam === category.slug ? 'text-brand font-semibold' : 'text-ink-muted hover:text-ink'
                   }`}
                 >
                   {category.name}
@@ -59,7 +59,7 @@ export const Products = () => {
                   placeholder="Search products"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-white border border-ink/10 rounded-full pl-11 pr-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-copper/40"
+                  className="w-full bg-white border border-ink/10 rounded-full pl-11 pr-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-brand/40"
                 />
               </div>
               <FacilityResetFilters disabled={!search.trim()} onReset={() => setSearch('')} />
